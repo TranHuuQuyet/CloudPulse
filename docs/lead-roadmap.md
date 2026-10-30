@@ -187,3 +187,4 @@ Leader mở file này ra vào **21:00 tối Chủ Nhật hàng tuần** và đ�
 3. *"Bạn có đang bị vướng mắc kỹ thuật nào cần Leader hoặc AI giải quyết hộ không?"*
 
 > **Châm ngôn của Leader**: *"Không đợi đến hạn mới hỏi, kiểm tra tiến độ mỗi 3 ngày để phát hiện chậm trễ từ trong trứng nước."*
+
