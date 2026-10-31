@@ -1,0 +1,176 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: CloudPulse - Website Health & Availability Monitoring System (.NET 8 Serverless)
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: dotnet8
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        MONITORS_TABLE: !Ref MonitorsTable
+        CHECK_RESULTS_TABLE: !Ref CheckResultsTable
+        INCIDENTS_TABLE: !Ref IncidentsTable
+        SNS_TOPIC_ARN: !Ref CloudPulseAlertsTopic
+        CONSECUTIVE_FAILURES_THRESHOLD: "2"
+        TIMEOUT_MS: "5000"
+
+Resources:
+  # ==========================================
+  # 1. DynamoDB Tables (On-Demand / Free Tier)
+  # ==========================================
+  MonitorsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: CloudPulse_Monitors
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: monitorId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: monitorId
+          KeyType: HASH
+
+  CheckResultsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: CloudPulse_CheckResults
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: monitorId
+          AttributeType: S
+        - AttributeName: checkedAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: monitorId
+          KeyType: HASH
+        - AttributeName: checkedAt
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: expireAt
+        Enabled: true
+
+  IncidentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: CloudPulse_Incidents
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: monitorId
+          AttributeType: S
+        - AttributeName: incidentId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: monitorId
+          KeyType: HASH
+        - AttributeName: incidentId
+          KeyType: RANGE
+
+  # ==========================================
+  # 2. SNS Topic (Email Notifications)
+  # ==========================================
+  CloudPulseAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: CloudPulse_Alerts
+
+  # ==========================================
+  # 3. HTTP API Gateway (API v2)
+  # ==========================================
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: CloudPulse-HttpApi
+      CorsConfiguration:
+        AllowMethods:
+          - GET
+          - POST
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - "*"
+        AllowOrigins:
+          - "*"
+
+  # ==========================================
+  # 4. Lambda Functions (.NET 8)
+  # ==========================================
+  # A. API Handler (ASP.NET Core Minimal API)
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: CloudPulse-Api
+      Handler: CloudPulse.Api
+      CodeUri: ./backend/src/CloudPulse.Api/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MonitorsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CheckResultsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref IncidentsTable
+      Events:
+        HttpApiProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /{proxy+}
+            Method: ANY
+        HttpApiRoot:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /
+            Method: ANY
+
+  # B. Health Checker Engine (Cron EventBridge)
+  HealthCheckerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: CloudPulse-HealthChecker
+      Handler: CloudPulse.HealthChecker::CloudPulse.HealthChecker.Function::FunctionHandler
+      CodeUri: ./backend/src/CloudPulse.HealthChecker/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MonitorsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CheckResultsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref IncidentsTable
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt CloudPulseAlertsTopic.TopicName
+      Events:
+        EveryMinuteSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 minute)
+            Enabled: true
+
+  # C. Mock Target Endpoint (For Demo Failure Injection)
+  MockTargetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: CloudPulse-MockTarget
+      Handler: CloudPulse.MockTarget::CloudPulse.MockTarget.Function::FunctionHandler
+      CodeUri: ./backend/src/CloudPulse.MockTarget/
+      Events:
+        HttpApiMock:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /mock
+            Method: GET
+
+Outputs:
+  ApiEndpoint:
+    Description: HTTP API Gateway endpoint URL
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+  MockTargetEndpoint:
+    Description: Mock Target URL for Failure Injection Demo
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/mock"
+  AlertsTopicArn:
+    Description: SNS Topic ARN for Alerts
+    Value: !Ref CloudPulseAlertsTopic
