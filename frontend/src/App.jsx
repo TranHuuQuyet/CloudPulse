@@ -1,8 +1,7 @@
 import { useState } from "react";
 import Navbar from "./components/Navbar";
 import StatsOverview from "./components/StatsOverview";
-import { mockStats, mockMeta, mockLatencyData } from "./data/mockData";
-import LatencyChart from "./components/LatencyChart";
+import { mockStats, mockMeta } from "./data/mockData";
 
 export default function App() {
   const [syncing, setSyncing] = useState(false);
@@ -22,9 +21,6 @@ export default function App() {
         onAdd={() => console.log("Mở modal thêm monitor")}
       />
       <StatsOverview stats={mockStats} />
-      <main className="mx-auto max-w-6xl px-4 pb-8">
-        <LatencyChart data={mockLatencyData} sourceLabel="Dữ liệu giả (Mock Data)" endpointName="MockTarget" />
-      </main>
     </div>
   );
 }
