@@ -1,19 +1,66 @@
-# Build results
+# ==========================================
+# .NET / C# Build Outputs & Artifacts
+# ==========================================
 [Bb]in/
 [Oo]bj/
 [Dd]ebug/
 [Rr]elease/
+x64/
+x86/
+artifacts/
+[Tt]est[Rr]esult*/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
 
-# Visual Studio / VS Code
+# ==========================================
+# AWS SAM (Serverless Application Model)
+# ==========================================
+.aws-sam/
+
+# ==========================================
+# Node / Frontend (React, Vite, npm)
+# ==========================================
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==========================================
+# Environment Variables & Secrets
+# ==========================================
+.env
+.env.*
+!.env.example
+
+# ==========================================
+# IDE & Editors (VS Code, Visual Studio, JetBrains)
+# ==========================================
 .vs/
+.idea/
+*.swp
+*.swo
+
+# VS Code settings (keep shared settings, ignore user-specific state)
 .vscode/*
 !.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
-# Test results
-[Tt]est[Rr]esult*/
-
-# Environment & User files
-*.user
-*.suo
-.env
-
+# ==========================================
+# OS Generated Files
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
