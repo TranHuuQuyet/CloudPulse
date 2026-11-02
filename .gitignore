@@ -1,0 +1,19 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/*
+!.vscode/settings.json
+
+# Test results
+[Tt]est[Rr]esult*/
+
+# Environment & User files
+*.user
+*.suo
+.env
+
