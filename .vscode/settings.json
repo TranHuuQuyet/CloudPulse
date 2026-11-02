@@ -1,0 +1,8 @@
+{
+  "omnisharp.dotnetPath": "/home/tranquan/.config/Code/User/globalStorage/ms-dotnettools.vscode-dotnet-runtime/.dotnet/dotnet",
+  "terminal.integrated.env.linux": {
+    "PATH": "/home/tranquan/.config/Code/User/globalStorage/ms-dotnettools.vscode-dotnet-runtime/.dotnet:${env:PATH}",
+    "DOTNET_ROOT": "/home/tranquan/.config/Code/User/globalStorage/ms-dotnettools.vscode-dotnet-runtime/.dotnet"
+  }
+}
+
