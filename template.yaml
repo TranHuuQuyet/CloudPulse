@@ -2,6 +2,21 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: CloudPulse - Website Health & Availability Monitoring System (.NET 8 Serverless)
 
+Parameters:
+  AdminEmail:
+    Type: String
+    Description: Admin email address for CloudPulse downtime alert notifications
+    Default: "huuquyet120406@gmail.com"
+  TelegramBotToken:
+    Type: String
+    Description: Telegram Bot Token from @BotFather
+    NoEcho: true
+    Default: ""
+  TelegramChatId:
+    Type: String
+    Description: Telegram Group/Channel Chat ID to receive instant alerts
+    Default: ""
+
 Globals:
   Function:
     Timeout: 30
@@ -17,6 +32,8 @@ Globals:
         SNS_TOPIC_ARN: !Ref CloudPulseAlertsTopic
         CONSECUTIVE_FAILURES_THRESHOLD: "2"
         TIMEOUT_MS: "5000"
+        TELEGRAM_BOT_TOKEN: !Ref TelegramBotToken
+        TELEGRAM_CHAT_ID: !Ref TelegramChatId
 
 Resources:
   # ==========================================
@@ -70,12 +87,19 @@ Resources:
           KeyType: RANGE
 
   # ==========================================
-  # 2. SNS Topic (Email Notifications)
+  # 2. SNS Topic & Subscription (Email Alerts)
   # ==========================================
   CloudPulseAlertsTopic:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: CloudPulse_Alerts
+
+  AlertEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref CloudPulseAlertsTopic
+      Protocol: email
+      Endpoint: !Ref AdminEmail
 
   # ==========================================
   # 3. HTTP API Gateway (API v2)
