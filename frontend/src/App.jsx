@@ -4,8 +4,9 @@ import StatsOverview from "./components/StatsOverview";
 import MonitorList from "./components/MonitorList";
 import AddMonitorModal from "./components/AddMonitorModal";
 import LatencyChart from "./components/LatencyChart";
+import IncidentHistory from "./components/IncidentHistory";
 import Toast from "./components/Toast";
-import { mockMeta, mockLatencyData } from "./data/mockData";
+import { mockMeta, mockLatencyData, mockIncidents } from "./data/mockData";
 import { getMonitors, getStats, addMonitor, deleteMonitor, checkNow } from "./api/client";
 
 const EMPTY_STATS = { uptimePercent: 0, openCritical: 0, endpointCount: 0, p95Ms: 0 };
@@ -85,6 +86,7 @@ export default function App() {
       {/* Phần của TV5: giữ nguyên */}
       <main className="mx-auto max-w-6xl px-4 pb-8">
         <LatencyChart data={mockLatencyData} sourceLabel="Dữ liệu giả lập" />
+        <IncidentHistory incidents={mockIncidents} sourceLabel="Dữ liệu giả lập" />
       </main>
 
       {showModal && <AddMonitorModal onClose={() => setShowModal(false)} onSubmit={handleAdd} />}
