@@ -10,4 +10,8 @@
     <PackageReference Include="Amazon.Lambda.AspNetCoreServer.Hosting" Version="2.2.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CloudPulse.core\CloudPulse.core.csproj" />
+  </ItemGroup>
+
 </Project>
