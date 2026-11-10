@@ -86,17 +86,26 @@ public class Function
         {
             if (resultsMap.TryGetValue(monitor.MonitorId, out var checkResult))
             {
-                var transition = await _stateMachine.ProcessTransitionAsync(
-                    monitor,
-                    checkResult,
-                    _incidentRepository,
-                    failureThreshold: 2);
+                try
+                {
+                    var transition = await _stateMachine.ProcessTransitionAsync(
+                        monitor,
+                        checkResult,
+                        _incidentRepository,
+                        failureThreshold: 2);
 
-                // Update monitor table
-                await _monitorRepository.SaveMonitorAsync(monitor);
+                    // Update monitor table
+                    await _monitorRepository.SaveMonitorAsync(monitor);
 
-                // Dispatch alerts (SNS + Telegram) if transition requires it
-                await _alertDispatcher.DispatchAsync(monitor, transition);
+                    // Dispatch alerts (SNS + Telegram) if transition requires it
+                    await _alertDispatcher.DispatchAsync(monitor, transition);
+                }
+                catch (Exception ex)
+                {
+                    var errMsg = $"[ERROR] Failed processing monitor {monitor.MonitorId} ({monitor.Name}): {ex.Message}";
+                    context?.Logger?.LogLine(errMsg);
+                    Console.WriteLine(errMsg);
+                }
             }
         }
 

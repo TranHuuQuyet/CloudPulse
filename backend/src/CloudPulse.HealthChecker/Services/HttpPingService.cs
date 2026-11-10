@@ -1,6 +1,7 @@
 namespace CloudPulse.HealthChecker.Services;
 
 using System.Diagnostics;
+using System.Net.Sockets;
 using CloudPulse.Core.Entity;
 using CloudPulse.Core.Validation;
 
@@ -15,10 +16,18 @@ public class HttpPingService : IHttpPingService
         TimeSpan? timeout = null,
         Func<string, CancellationToken, Task<UrlValidationResult>>? urlValidator = null)
     {
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? CreateDefaultHttpClient();
         _timeout = timeout ?? TimeSpan.FromSeconds(5);
-        _httpClient.Timeout = _timeout;
         _urlValidator = urlValidator ?? UrlValidator.ValidateAsync;
+    }
+
+    private static HttpClient CreateDefaultHttpClient()
+    {
+        var handler = new SocketsHttpHandler
+        {
+            AllowAutoRedirect = false
+        };
+        return new HttpClient(handler);
     }
 
     public async Task<CheckResultItem> PingAsync(MonitorItem monitor, CancellationToken cancellationToken = default)
@@ -28,11 +37,18 @@ public class HttpPingService : IHttpPingService
         var checkedAt = DateTime.UtcNow.ToString("o");
         var expireAt = DateTimeOffset.UtcNow.AddDays(7).ToUnixTimeSeconds();
 
-        // 1. Validate URL to prevent SSRF
+        // 1. Validate URL to prevent SSRF and resolve DNS safely
         var validationResult = await _urlValidator(monitor.Url, cancellationToken);
 
         if (!validationResult.IsValid)
         {
+            string errorType = validationResult.IsDnsError ||
+                (validationResult.ErrorMessage != null &&
+                 (validationResult.ErrorMessage.Contains("DNS", StringComparison.OrdinalIgnoreCase) ||
+                  validationResult.ErrorMessage.Contains("resolve host", StringComparison.OrdinalIgnoreCase)))
+                ? CheckErrorType.DnsError
+                : CheckErrorType.SsrfBlocked;
+
             return new CheckResultItem
             {
                 MonitorId = monitor.MonitorId,
@@ -40,8 +56,8 @@ public class HttpPingService : IHttpPingService
                 HttpStatus = 0,
                 ResponseTimeMs = 0,
                 IsSuccess = false,
-                ErrorType = CheckErrorType.SsrfBlocked,
-                ErrorMessage = validationResult.ErrorMessage ?? "URL failed SSRF validation.",
+                ErrorType = errorType,
+                ErrorMessage = validationResult.ErrorMessage ?? (errorType == CheckErrorType.DnsError ? "DNS resolution failed." : "URL failed SSRF validation."),
                 ExpireAt = expireAt
             };
         }
@@ -91,6 +107,13 @@ public class HttpPingService : IHttpPingService
         catch (HttpRequestException ex)
         {
             stopwatch.Stop();
+            bool isDns = ex.InnerException is SocketException sock &&
+                (sock.SocketErrorCode == SocketError.HostNotFound ||
+                 sock.SocketErrorCode == SocketError.NoData ||
+                 sock.SocketErrorCode == SocketError.TryAgain) ||
+                ex.Message.Contains("Name or service not known", StringComparison.OrdinalIgnoreCase) ||
+                ex.Message.Contains("No such host is known", StringComparison.OrdinalIgnoreCase);
+
             return new CheckResultItem
             {
                 MonitorId = monitor.MonitorId,
@@ -98,7 +121,7 @@ public class HttpPingService : IHttpPingService
                 HttpStatus = 0,
                 ResponseTimeMs = stopwatch.ElapsedMilliseconds,
                 IsSuccess = false,
-                ErrorType = CheckErrorType.ConnectionError,
+                ErrorType = isDns ? CheckErrorType.DnsError : CheckErrorType.ConnectionError,
                 ErrorMessage = ex.Message,
                 ExpireAt = expireAt
             };

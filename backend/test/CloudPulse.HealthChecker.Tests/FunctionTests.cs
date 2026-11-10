@@ -93,4 +93,47 @@ public class FunctionTests
         _mockAlertDispatcher.Verify(a => a.DispatchAsync(monitor1, It.IsAny<StateTransitionResult>(), It.IsAny<CancellationToken>()), Times.Once);
         _mockAlertDispatcher.Verify(a => a.DispatchAsync(monitor2, It.IsAny<StateTransitionResult>(), It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task FunctionHandler_WhenOneMonitorThrowsException_ContinuesProcessingOtherMonitors()
+    {
+        // Arrange
+        var monitor1 = new MonitorItem { MonitorId = "mon-faulty", Name = "Faulty Monitor", Url = "https://faulty.example.com" };
+        var monitor2 = new MonitorItem { MonitorId = "mon-healthy", Name = "Healthy Monitor", Url = "https://healthy.example.com" };
+        var monitors = new List<MonitorItem> { monitor1, monitor2 };
+
+        var check1 = new CheckResultItem { MonitorId = "mon-faulty", IsSuccess = false };
+        var check2 = new CheckResultItem { MonitorId = "mon-healthy", IsSuccess = true };
+        var checkResults = new List<CheckResultItem> { check1, check2 };
+
+        _mockMonitorRepo.Setup(r => r.GetAllMonitorsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(monitors);
+        _mockPingService.Setup(p => p.PingAllAsync(monitors, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(checkResults);
+
+        // Monitor 1 throws during state machine processing
+        _mockStateMachine.Setup(s => s.ProcessTransitionAsync(monitor1, check1, _mockIncidentRepo.Object, 2, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Simulated DynamoDB network timeout"));
+
+        // Monitor 2 succeeds normally
+        _mockStateMachine.Setup(s => s.ProcessTransitionAsync(monitor2, check2, _mockIncidentRepo.Object, 2, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StateTransitionResult(MonitorStatus.Up, MonitorStatus.Up, 0, false, false, false, false, null, null));
+
+        var function = new Function(
+            _mockMonitorRepo.Object,
+            _mockCheckResultRepo.Object,
+            _mockIncidentRepo.Object,
+            _mockPingService.Object,
+            _mockStateMachine.Object,
+            _mockAlertDispatcher.Object
+        );
+
+        // Act
+        var result = await function.FunctionHandler(null, _mockContext.Object);
+
+        // Assert: FunctionHandler completes without throwing, and healthy monitor was processed
+        Assert.Equal("Completed checking 2 monitors.", result);
+        _mockMonitorRepo.Verify(r => r.SaveMonitorAsync(monitor2, It.IsAny<CancellationToken>()), Times.Once);
+        _mockAlertDispatcher.Verify(a => a.DispatchAsync(monitor2, It.IsAny<StateTransitionResult>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

@@ -7,12 +7,18 @@ using CloudPulse.Core.Entity;
 public class TelegramAlertChannel : ITelegramAlertChannel
 {
     private readonly HttpClient _httpClient;
+    private readonly TimeSpan _timeout;
     private readonly string? _botToken;
     private readonly string? _chatId;
 
-    public TelegramAlertChannel(HttpClient? httpClient = null, string? botToken = null, string? chatId = null)
+    public TelegramAlertChannel(
+        HttpClient? httpClient = null,
+        string? botToken = null,
+        string? chatId = null,
+        TimeSpan? timeout = null)
     {
         _httpClient = httpClient ?? new HttpClient();
+        _timeout = timeout ?? TimeSpan.FromSeconds(5);
         _botToken = botToken ?? Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
         _chatId = chatId ?? Environment.GetEnvironmentVariable("TELEGRAM_CHAT_ID");
     }
@@ -49,10 +55,13 @@ public class TelegramAlertChannel : ITelegramAlertChannel
             var json = JsonSerializer.Serialize(payload);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            using var response = await _httpClient.PostAsync(url, content, cancellationToken);
+            using var timeoutCts = new CancellationTokenSource(_timeout);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+            using var response = await _httpClient.PostAsync(url, content, linkedCts.Token);
             if (!response.IsSuccessStatusCode)
             {
-                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                var errorBody = await response.Content.ReadAsStringAsync(linkedCts.Token);
                 Console.WriteLine($"[WARN] TelegramAlertChannel: Telegram API returned {(int)response.StatusCode} {response.ReasonPhrase}: {errorBody}");
             }
             else

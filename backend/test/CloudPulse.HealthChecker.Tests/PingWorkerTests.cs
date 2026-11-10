@@ -143,6 +143,40 @@ public class PingWorkerTests
     }
 
     [Fact]
+    public async Task PingAsync_ReturnsDnsError_WhenDnsResolutionFails()
+    {
+        // Arrange
+        var pingService = new HttpPingService();
+
+        var monitor = new MonitorItem
+        {
+            MonitorId = "mon-dns",
+            Name = "Unresolvable Host",
+            Url = "https://this-domain-definitely-does-not-exist-123456789.cloudpulse.invalid"
+        };
+
+        // Act
+        var result = await pingService.PingAsync(monitor);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal(CheckErrorType.DnsError, result.ErrorType);
+    }
+
+    [Fact]
+    public void HttpPingService_DoesNotMutateInjectedHttpClientTimeout()
+    {
+        // Arrange
+        var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+
+        // Act
+        _ = new HttpPingService(httpClient, TimeSpan.FromSeconds(5));
+
+        // Assert: Injected client timeout must not be overridden
+        Assert.Equal(TimeSpan.FromSeconds(60), httpClient.Timeout);
+    }
+
+    [Fact]
     public async Task PingAllAsync_ExecutesConcurrently_UsingTaskWhenAll()
     {
         // Arrange

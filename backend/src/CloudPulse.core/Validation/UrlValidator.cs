@@ -52,7 +52,7 @@ public static class UrlValidator
             var hostAddresses = await Dns.GetHostAddressesAsync(uri.DnsSafeHost, cancellationToken);
             if (hostAddresses.Length == 0)
             {
-                return UrlValidationResult.Invalid("Unable to resolve host domain.", uri.Host);
+                return UrlValidationResult.Invalid("Unable to resolve host domain.", uri.Host, isDnsError: true);
             }
             foreach (var ip in hostAddresses)
             {
@@ -65,7 +65,7 @@ public static class UrlValidator
         
         catch (SocketException)
         {
-            return UrlValidationResult.Invalid("DNS resolution failed or host not found.", uri.Host);
+            return UrlValidationResult.Invalid("DNS resolution failed or host not found.", uri.Host, isDnsError: true);
         }
         catch (Exception ex)
         {
