@@ -1,3 +1,4 @@
+# Build results
 # ==========================================
 # .NET / C# Build Outputs & Artifacts
 # ==========================================
@@ -14,6 +15,7 @@ artifacts/
 *.userosscache
 *.sln.docstates
 
+# Visual Studio / VS Code
 # ==========================================
 # AWS SAM (Serverless Application Model)
 # ==========================================
@@ -439,6 +441,14 @@ FodyWeavers.xsd
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# Test results
+[Tt]est[Rr]esult*/
+
+# Environment & User files
+*.user
+*.suo
+.env
+
 # ==========================================
 # OS Generated Files
 # ==========================================
@@ -543,3 +553,20 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# .Specify
+.specify/
+
+# .NET build artifacts
+[Bb]in/
+[Oo]bj/
+
+# Agent-Skill
+.agents/
+.cursor/
+.github/
+specs/
+AGENTS.md
+CLAUDE.md
+
+
