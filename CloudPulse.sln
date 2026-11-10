@@ -1,5 +1,4 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -14,6 +13,10 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CloudPulse.core.Tests", "CloudPulse.core.Tests", "{0AF903F1-CFEF-291A-6A34-555FA61FF34D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cloudpulse.core.Tests", "backend\test\CloudPulse.core.Tests\Cloudpulse.core.Tests.csproj", "{E10A20D8-627B-4FB6-921A-5F8A6665BA67}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudPulse.HealthChecker", "backend\src\CloudPulse.HealthChecker\CloudPulse.HealthChecker.csproj", "{4C97FBEC-9A3F-4F8C-9073-7848C1BE16F1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudPulse.HealthChecker.Tests", "backend\test\CloudPulse.HealthChecker.Tests\CloudPulse.HealthChecker.Tests.csproj", "{D1917FA8-2AA0-4DBC-9502-6B35A5BEB3F3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -49,6 +52,30 @@ Global
 		{E10A20D8-627B-4FB6-921A-5F8A6665BA67}.Release|x64.Build.0 = Release|Any CPU
 		{E10A20D8-627B-4FB6-921A-5F8A6665BA67}.Release|x86.ActiveCfg = Release|Any CPU
 		{E10A20D8-627B-4FB6-921A-5F8A6665BA67}.Release|x86.Build.0 = Release|Any CPU
+		{4C97FBEC-9A3F-4F8C-9073-7848C1BE16F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C97FBEC-9A3F-4F8C-9073-7848C1BE16F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C97FBEC-9A3F-4F8C-9073-7848C1BE16F1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4C97FBEC-9A3F-4F8C-9073-7848C1BE16F1}.Debug|x64.Build.0 = Debug|Any CPU
+		{4C97FBEC-9A3F-4F8C-9073-7848C1BE16F1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4C97FBEC-9A3F-4F8C-9073-7848C1BE16F1}.Debug|x86.Build.0 = Debug|Any CPU
+		{4C97FBEC-9A3F-4F8C-9073-7848C1BE16F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C97FBEC-9A3F-4F8C-9073-7848C1BE16F1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C97FBEC-9A3F-4F8C-9073-7848C1BE16F1}.Release|x64.ActiveCfg = Release|Any CPU
+		{4C97FBEC-9A3F-4F8C-9073-7848C1BE16F1}.Release|x64.Build.0 = Release|Any CPU
+		{4C97FBEC-9A3F-4F8C-9073-7848C1BE16F1}.Release|x86.ActiveCfg = Release|Any CPU
+		{4C97FBEC-9A3F-4F8C-9073-7848C1BE16F1}.Release|x86.Build.0 = Release|Any CPU
+		{D1917FA8-2AA0-4DBC-9502-6B35A5BEB3F3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1917FA8-2AA0-4DBC-9502-6B35A5BEB3F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1917FA8-2AA0-4DBC-9502-6B35A5BEB3F3}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D1917FA8-2AA0-4DBC-9502-6B35A5BEB3F3}.Debug|x64.Build.0 = Debug|Any CPU
+		{D1917FA8-2AA0-4DBC-9502-6B35A5BEB3F3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D1917FA8-2AA0-4DBC-9502-6B35A5BEB3F3}.Debug|x86.Build.0 = Debug|Any CPU
+		{D1917FA8-2AA0-4DBC-9502-6B35A5BEB3F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1917FA8-2AA0-4DBC-9502-6B35A5BEB3F3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1917FA8-2AA0-4DBC-9502-6B35A5BEB3F3}.Release|x64.ActiveCfg = Release|Any CPU
+		{D1917FA8-2AA0-4DBC-9502-6B35A5BEB3F3}.Release|x64.Build.0 = Release|Any CPU
+		{D1917FA8-2AA0-4DBC-9502-6B35A5BEB3F3}.Release|x86.ActiveCfg = Release|Any CPU
+		{D1917FA8-2AA0-4DBC-9502-6B35A5BEB3F3}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -59,5 +86,7 @@ Global
 		{C9F2D317-4826-407B-F8B2-698283998959} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
 		{0AF903F1-CFEF-291A-6A34-555FA61FF34D} = {C9F2D317-4826-407B-F8B2-698283998959}
 		{E10A20D8-627B-4FB6-921A-5F8A6665BA67} = {0AF903F1-CFEF-291A-6A34-555FA61FF34D}
+		{4C97FBEC-9A3F-4F8C-9073-7848C1BE16F1} = {0F9113EE-888A-26D2-68B0-4A7D0A2A8745}
+		{D1917FA8-2AA0-4DBC-9502-6B35A5BEB3F3} = {C9F2D317-4826-407B-F8B2-698283998959}
 	EndGlobalSection
 EndGlobal

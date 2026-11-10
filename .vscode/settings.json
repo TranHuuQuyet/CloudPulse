@@ -1,8 +1,20 @@
 {
-  "omnisharp.dotnetPath": "/home/tranquan/.config/Code/User/globalStorage/ms-dotnettools.vscode-dotnet-runtime/.dotnet/dotnet",
+  "csharp.dotnetPath": "/home/tranquan/.local/bin/dotnet",
+  "omnisharp.dotnetPath": "/home/tranquan/.local/bin/dotnet",
+  "dotnet.dotnetPath": "/home/tranquan/.config/Code/User/globalStorage/ms-dotnettools.vscode-dotnet-runtime/.dotnet",
+  "dotnet.defaultSolution": "CloudPulse.sln",
+  "dotnetAcquisitionExtension.existingDotnetPath": [
+    {
+      "extensionId": "ms-dotnettools.csharp",
+      "path": "/home/tranquan/.local/bin/dotnet"
+    },
+    {
+      "extensionId": "ms-dotnettools.csdevkit",
+      "path": "/home/tranquan/.local/bin/dotnet"
+    }
+  ],
   "terminal.integrated.env.linux": {
-    "PATH": "/home/tranquan/.config/Code/User/globalStorage/ms-dotnettools.vscode-dotnet-runtime/.dotnet:${env:PATH}",
+    "PATH": "/home/tranquan/.local/bin:/home/tranquan/.config/Code/User/globalStorage/ms-dotnettools.vscode-dotnet-runtime/.dotnet:${env:PATH}",
     "DOTNET_ROOT": "/home/tranquan/.config/Code/User/globalStorage/ms-dotnettools.vscode-dotnet-runtime/.dotnet"
   }
 }
-

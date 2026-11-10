@@ -556,3 +556,17 @@ $RECYCLE.BIN/
 
 # .Specify
 .specify/
+
+# .NET build artifacts
+[Bb]in/
+[Oo]bj/
+
+# Agent-Skill
+.agents/
+.cursor/
+.github/
+specs/
+AGENTS.md
+CLAUDE.md
+
+
