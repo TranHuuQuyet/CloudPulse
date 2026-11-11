@@ -18,7 +18,7 @@ export default function StatsOverview({ stats }) {
       <StatCard icon={TrendingUp} label="Tỷ lệ Uptime" value={`${stats.uptimePercent}%`} tone="text-emerald-600" />
       <StatCard icon={AlertTriangle} label="Sự cố Critical đang mở" value={stats.openCritical} tone="text-red-500" />
       <StatCard icon={Globe} label="Số lượng Endpoint" value={stats.endpointCount} tone="text-blue-600" />
-      <StatCard icon={Timer} label="Độ trễ trung bình p95" value={`${stats.p95Ms} ms`} tone="text-amber-500" />
+      <StatCard icon={Timer} label="Độ trễ p95" value={stats.p95Ms == null ? "—" : `${stats.p95Ms} ms`} tone="text-amber-500" />
     </section>
   );
 }
