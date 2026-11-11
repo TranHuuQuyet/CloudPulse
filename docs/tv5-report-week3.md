@@ -119,11 +119,11 @@ API chưa cung cấp endpoint thống kê lịch sử tổng hợp. Frontend hi�
 
 | Yêu cầu | Tình huống | Kết quả mong đợi | Kết quả thực tế | Bằng chứng |
 | --- | --- | --- | --- | --- |
-| UC-06 / FR-08 | Chọn monitor A rồi B nhanh | Tên/chart/incidents thuộc B; response A không ghi đè | Chờ đo | E02 |
-| UC-06 / FR-08 | Sync và Check Now | Hai API lịch sử được tải lại song song | Chờ đo | Network + E02 |
-| FR-08 | Mảng rỗng / lỗi API | Empty state / thông báo lỗi; không hiển thị mock thay API lỗi | Chờ đo | E02 |
-| FR-08 | Env không có API URL | Nhãn dữ liệu giả lập, mock hoạt động | Chờ đo | Ảnh local |
-| FR-08 | MIN/AVG/MAX, tooltip, màn hình nhỏ | Đúng ms/HTTP; bảng cuộn ngang | Chờ đo | E02 |
+| UC-06 / FR-08 | Chọn monitor A rồi B nhanh | Tên/chart/incidents thuộc B; response A không ghi đè | Đạt trên Chrome: A bị trì hoãn 1.200 ms, đổi A→B cách 150 ms; sau khi A trả về vẫn giữ B, 222 ms và CAUSE_B. Dùng ID AWS thật, response lịch sử được điều khiển để tái tạo race | [Kết quả + ảnh race](evidence/w3-05/README.md) |
+| UC-06 / FR-08 | Sync và Check Now | Hai API lịch sử được tải lại song song | Đạt qua proxy dev với AWS thật: hai request khởi phát cùng mili giây ở lần lưu bằng chứng; Check Now 736 ms, HTTP 200, latency đích 178 ms; điểm mới có timestamp 08:34:43 UTC và đúng latency xuất hiện trong checks. Cửa sổ tối đa 30 điểm nên điểm mới thay điểm cũ khi đầy | [Network và kết quả đo](evidence/w3-05/results.json) |
+| FR-08 | Mảng rỗng / lỗi API | Empty state / thông báo lỗi; không hiển thị mock thay API lỗi | Đạt: tạo monitor AWS tạm, checks/incidents=[] và UI hiện hai empty state, đã xóa monitor tạm sau thử. Ca 503 dùng response điều khiển, hiện lỗi; bỏ lỗi rồi Sync tải AWS lại thành công. Mode URL sai trỏ cổng 1 trả 502 qua proxy, giữ lỗi và cho Sync, không fallback mock | [Ảnh empty/error/URL sai](evidence/w3-05/README.md) |
+| FR-08 | Env không có API URL | Nhãn dữ liệu giả lập, mock hoạt động | Đạt: chạy Vite mode acceptance-mock với API URL rỗng; chart và incidents hiện dữ liệu giả lập. .env AWS gốc được giữ nguyên | [Ảnh mock mode](evidence/w3-05/mock-mode.png) |
+| FR-08 | MIN/AVG/MAX, tooltip, màn hình nhỏ | Đúng ms/HTTP; bảng cuộn ngang | Đạt: đối chiếu 30 điểm AWS với MIN/AVG/MAX; tooltip có ms và HTTP 500. Mobile 390 px, bảng rộng 760 px trong khung 316 px, cuộn thử 200 px; sau sửa min-w-0, trang không tràn ngang. Giờ trên trục X còn lỗi UTC, xem 5.1.1 | [Ảnh desktop/mobile + số đo](evidence/w3-05/README.md) |
 | FR-03 | HTTP 200, 500, timeout | Phân loại và lưu kết quả đúng | Chờ đo | E04 |
 | FR-04 | FAIL 1 → FAIL 2 → FAIL 3 | DOWN từ lần 2; một Incident/cảnh báo mở | Chờ đo | E03–E05 |
 | FR-04/05 | SUCCESS sau DOWN | UP; RESOLVED; downtime và recovery | Chờ đo | E03–E05 |
@@ -131,6 +131,16 @@ API chưa cung cấp endpoint thống kê lịch sử tổng hợp. Frontend hi�
 | NFR | MTTD, độ trễ alert, Check Now | Đối chiếu từng tiêu chí acceptance | Chờ đo | Log timestamp + Network |
 
 MTTD = thời điểm xác nhận DOWN − thời điểm bắt đầu gây lỗi. Độ trễ cảnh báo = thời điểm nhận − thời điểm chuyển trạng thái. Ghi ít nhất thời điểm, monitor ID, số mẫu, đơn vị và khoảng min/max; không suy ra đạt SLA từ một lượt demo.
+
+### 5.1.1. Kiểm thử bổ sung W3-05 và lỗi cần bàn giao
+
+Đã chạy Chrome headless với timezone Asia/Ho_Chi_Minh ngày 11/11/2026, dùng hai monitor Mock 200/Mock 500 đang có trên AWS. Chi tiết mỗi lần chạy, URL request, timestamp, số đo và ảnh nằm tại [thư mục bằng chứng](evidence/w3-05/README.md). Các ca race, empty và 503 dùng response điều khiển trong trình duyệt; không mô tả chúng là sự cố AWS thật. Các ảnh trước đó do người dùng cung cấp đã xác nhận Mock 200 UP, Mock 500 DOWN và Incident OPEN; chưa xác nhận RESOLVED hoặc chống spam cảnh báo.
+
+**Preview / CORS — chưa đạt khi POST trực tiếp:** Đã build với .env AWS rồi chạy `npm.cmd run preview` (không proxy dev). GET và biểu đồ tải được từ API Gateway; POST JSON bị trình duyệt chặn với “Response to preflight request doesn't pass access control check: It does not have HTTP ok status”, dẫn tới Failed to fetch. Probe dùng body rỗng để không thêm tài nguyên mới. Cần TV1/TV3 sửa OPTIONS/preflight trên deployment; proxy dev chỉ giúp chạy local, không giải quyết lỗi hosting production. Kịch bản kiểm tra lỗi CORS chạy thành công không đồng nghĩa nghiệm thu POST đạt.
+
+**Múi giờ — phát hiện lệch 7 giờ:** checks API trả chuỗi như `11/11 08:30:37`, trong khi client Việt Nam đang ở khoảng 15:30 cùng ngày. Incident `openedAt=2026-11-11T07:42:38.1020498Z` hiển thị 14:42:38 đúng UTC+7. API dùng `DateTime.Parse(check.CheckedAt).ToLocalTime().ToString("dd/MM HH:mm:ss")`, phụ thuộc timezone Lambda và mất thông tin timezone/năm. Cần TV3 trả thêm timestamp ISO 8601 UTC (`checkedAt` hoặc time ISO có Z); frontend sẽ định dạng bằng Asia/Ho_Chi_Minh. Không tự cộng 7 vào chuỗi không có timezone vì sẽ sai nếu backend thay timezone. Đây là ghi nhận lỗi, chưa sửa backend/deploy trong task này.
+
+**Hiển thị frontend đã sửa:** EMPTY_STATS dùng p95Ms=null để lúc mới mở hiện “—”; thêm min-w-0 vào thẻ monitor để URL dài không kéo rộng trang mobile. Lint và build pass; build còn cảnh báo bundle trên 500 kB.
 
 ### 5.2. FinOps: bảng ước tính và hóa đơn
 
