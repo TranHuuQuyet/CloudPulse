@@ -9,7 +9,7 @@ import Toast from "./components/Toast";
 import { mockMeta } from "./data/mockData";
 import { getMonitors, getStats, addMonitor, deleteMonitor, checkNow, getMonitorChecks, getMonitorIncidents, sourceLabel } from "./api/client";
 
-const EMPTY_STATS = { uptimePercent: 0, openCritical: 0, endpointCount: 0, p95Ms: 0 };
+const EMPTY_STATS = { uptimePercent: 0, openCritical: 0, endpointCount: 0, p95Ms: null };
 
 export default function App() {
   const [monitors, setMonitors] = useState([]);

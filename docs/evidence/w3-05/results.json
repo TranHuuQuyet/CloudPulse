@@ -1,0 +1,169 @@
+{
+  "executedAt": "2026-11-11T08:34:40.030Z",
+  "cases": [
+    {
+      "name": "live-api-and-metrics",
+      "status": "PASS",
+      "detail": {
+        "monitor": "Mock 200",
+        "points": 30,
+        "min": 19,
+        "max": 699,
+        "average": 84.33333333333333
+      }
+    },
+    {
+      "name": "live-sync-and-check-now-network",
+      "status": "PASS",
+      "detail": {
+        "sync": [
+          {
+            "url": "http://127.0.0.1:3015/api/monitors/69e72beb-8b08-4b9e-967e-c0d8deaeb6b2/checks?limit=30",
+            "at": 1794386082623
+          },
+          {
+            "url": "http://127.0.0.1:3015/api/monitors/69e72beb-8b08-4b9e-967e-c0d8deaeb6b2/incidents?limit=10",
+            "at": 1794386082623
+          }
+        ],
+        "afterCheck": [
+          {
+            "url": "http://127.0.0.1:3015/api/monitors/69e72beb-8b08-4b9e-967e-c0d8deaeb6b2/checks?limit=30",
+            "at": 1794386084975
+          },
+          {
+            "url": "http://127.0.0.1:3015/api/monitors/69e72beb-8b08-4b9e-967e-c0d8deaeb6b2/incidents?limit=10",
+            "at": 1794386084975
+          }
+        ],
+        "responseMs": 736,
+        "targetAtMost2s": true,
+        "check": {
+          "monitorId": "69e72beb-8b08-4b9e-967e-c0d8deaeb6b2",
+          "checkedAt": "2026-11-11T08:34:43.8759202Z",
+          "isSuccess": true,
+          "statusCode": 200,
+          "responseTimeMs": 178,
+          "errorType": "None",
+          "errorMessage": null
+        },
+        "matchingPoint": {
+          "time": "11/11 08:34:43",
+          "responseTimeMs": 178,
+          "statusCode": 200
+        },
+        "latestPointCount": 30
+      }
+    },
+    {
+      "name": "live-open-incident-and-timezone",
+      "status": "PASS",
+      "detail": {
+        "incident": {
+          "monitorId": "2e0c4b57-eb8f-4106-b769-4a356dd077ef",
+          "incidentId": "INC-1794382958102",
+          "status": "OPEN",
+          "openedAt": "2026-11-11T07:42:38.1020498Z",
+          "resolvedAt": null,
+          "reason": "HTTP 500 Internal Server Error",
+          "downtimeSeconds": null
+        },
+        "checkTimes": [
+          "11/11 08:32:37",
+          "11/11 08:33:37",
+          "11/11 08:34:37"
+        ],
+        "incidentDisplayedTimezone": "Asia/Ho_Chi_Minh",
+        "backendFormatting": "DateTime.Parse(checkedAt).ToLocalTime() on Lambda; see Program.cs"
+      }
+    },
+    {
+      "name": "controlled-race-response-A-after-B",
+      "status": "PASS",
+      "detail": {
+        "delayAms": 1200,
+        "gapBetweenSelectionsMs": 150,
+        "finalMonitor": "Mock 500",
+        "finalLatency": 222,
+        "finalCause": "CAUSE_B",
+        "source": "controlled responses using real monitor IDs"
+      }
+    },
+    {
+      "name": "live-new-monitor-empty-history",
+      "status": "PASS",
+      "detail": {
+        "monitorId": "b3bce47e-2ae2-4998-aa9d-88e6576d156b",
+        "checks": [],
+        "incidents": [],
+        "source": "new real AWS monitor before scheduled checks; deleted in finally"
+      }
+    },
+    {
+      "name": "controlled-empty-api-error-retry",
+      "status": "PASS",
+      "detail": "Empty arrays and HTTP 503 injected in browser; Sync retry recovered with live AWS data; no mock fallback"
+    },
+    {
+      "name": "mobile-tooltip-and-horizontal-scroll",
+      "status": "PASS",
+      "detail": {
+        "viewport": 390,
+        "table": {
+          "client": 316,
+          "scroll": 760,
+          "scrollLeft": 200
+        },
+        "tooltip": "11/11 08:20:37\n\n39 ms\n\nHTTP 500",
+        "pageWidth": 390
+      }
+    },
+    {
+      "name": "preview-direct-api-CORS",
+      "status": "KNOWN_FAILURE",
+      "detail": {
+        "functionalStatus": "FAIL",
+        "postValidationProbe": {
+          "error": "Failed to fetch"
+        },
+        "errors": [
+          "Access to fetch at 'https://ex9kcfdj5a.execute-api.ap-southeast-1.amazonaws.com/api/monitors' from origin 'http://127.0.0.1:4185' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: It does not have HTTP ok status.",
+          "Failed to load resource: net::ERR_FAILED"
+        ],
+        "note": "Probe executed successfully; production POST acceptance FAILS if browser blocks preflight. Empty body avoids creating a monitor."
+      }
+    },
+    {
+      "name": "mock-mode-no-api-url",
+      "status": "PASS",
+      "detail": {
+        "mode": "acceptance-mock",
+        "API_BASE": "",
+        "chartAndIncidents": "mock data displayed"
+      }
+    },
+    {
+      "name": "invalid-api-base-no-fallback",
+      "status": "PASS",
+      "detail": {
+        "mode": "acceptance-invalid",
+        "API_BASE": "http://127.0.0.1:1",
+        "status": 502,
+        "message": "API 502:",
+        "mockFallback": false
+      }
+    }
+  ],
+  "monitors": [
+    {
+      "id": "69e72beb-8b08-4b9e-967e-c0d8deaeb6b2",
+      "name": "Mock 200",
+      "status": "UP"
+    },
+    {
+      "id": "2e0c4b57-eb8f-4106-b769-4a356dd077ef",
+      "name": "Mock 500",
+      "status": "DOWN"
+    }
+  ]
+}
