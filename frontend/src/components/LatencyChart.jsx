@@ -33,7 +33,7 @@ export default function LatencyChart({ data = [], sourceLabel = "Dữ liệu", e
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Độ trễ phản hồi</h2>
-          <p className="mt-1 text-sm text-slate-500">{endpointName} · {sourceLabel} · Đơn vị ms</p>
+          <p className="mt-1 text-sm text-slate-500">{endpointName} · {sourceLabel} · Giờ Việt Nam (UTC+7) · Đơn vị ms</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {metrics.map(([label, value]) => (

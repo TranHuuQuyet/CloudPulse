@@ -14,9 +14,38 @@ async function request(path, options) {
 const monitorPath = (id) => `/api/monitors/${encodeURIComponent(id)}`;
 const normalizeMonitor = (m) => ({ ...m, id: m.monitorId ?? m.id, latencyMs: m.lastResponseTimeMs ?? m.latencyMs ?? 0 });
 
+const vietnamTimeFormat = new Intl.DateTimeFormat("en-GB", {
+  day: "2-digit",
+  month: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+  timeZone: "Asia/Ho_Chi_Minh",
+});
+
+export function formatCheckTime(checkedAt, fallbackTime = "—") {
+  if (typeof checkedAt !== "string" || !checkedAt.trim()) return fallbackTime;
+  const ms = Date.parse(checkedAt);
+  if (!Number.isFinite(ms)) return fallbackTime;
+
+  const parts = Object.fromEntries(
+    vietnamTimeFormat.formatToParts(ms).map((part) => [part.type, part.value]),
+  );
+  return `${parts.day}/${parts.month} ${parts.hour}:${parts.minute}:${parts.second}`;
+}
+
+export function normalizeCheckPoint(point) {
+  return {
+    ...point,
+    time: formatCheckTime(point?.checkedAt, point?.time ?? "—"),
+  };
+}
+
 export async function getMonitorChecks(id, limit = 30) {
-  if (!API_BASE) return mockLatencyData.slice(-limit);
-  return request(`${monitorPath(id)}/checks?limit=${limit}`);
+  if (!API_BASE) return mockLatencyData.slice(-limit).map(normalizeCheckPoint);
+  const items = await request(`${monitorPath(id)}/checks?limit=${limit}`);
+  return Array.isArray(items) ? items.map(normalizeCheckPoint) : [];
 }
 
 export async function getMonitorIncidents(id, endpointName, limit = 10) {

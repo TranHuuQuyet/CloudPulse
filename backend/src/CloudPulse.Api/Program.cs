@@ -5,6 +5,7 @@ using CloudPulse.Core.Validation;
 using CloudPulse.Api.Requests;
 using Amazon.Lambda.AspNetCoreServer.Hosting;
 using System.Diagnostics;
+using System.Globalization;
 using System.Net.Sockets;
 using Amazon.Runtime;
 
@@ -234,21 +235,10 @@ app.MapGet("/api/monitors/{id}/checks",
     }
     // 4. Trả về kết quả
     var chartData = checks
-    .Take(30)
-    .Reverse()
-    .Select(check => new
-    {
-        time = DateTime.Parse(check.CheckedAt)
-            .ToLocalTime()
-            .ToString("dd/MM HH:mm:ss"),
-
-        responseTimeMs = check.ResponseTimeMs,
-
-        statusCode = check.HttpStatus == 0
-            ? (int?)null
-            : check.HttpStatus
-    })
-    .ToList();
+        .Take(30)
+        .Reverse()
+        .Select(FormatCheckChartPoint)
+        .ToList();
 
     return Results.Ok(chartData);
 });
@@ -512,6 +502,31 @@ static bool IsDnsResolutionError(Exception? exception)
     }
 
     return false;
+}
+
+
+// Chuẩn hóa dữ liệu điểm biểu đồ kèm timestamp ISO 8601 UTC để Frontend tự đổi múi giờ
+static object FormatCheckChartPoint(CheckResultItem check)
+{
+    bool parsed = DateTimeOffset.TryParse(
+        check.CheckedAt,
+        CultureInfo.InvariantCulture,
+        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+        out var utcTimestamp);
+
+    return new
+    {
+        checkedAt = parsed
+            ? utcTimestamp.UtcDateTime.ToString("O", CultureInfo.InvariantCulture)
+            : check.CheckedAt,
+        time = parsed
+            ? utcTimestamp.UtcDateTime.ToString("dd/MM HH:mm:ss", CultureInfo.InvariantCulture)
+            : check.CheckedAt,
+        responseTimeMs = check.ResponseTimeMs,
+        statusCode = check.HttpStatus == 0
+            ? (int?)null
+            : check.HttpStatus
+    };
 }
 
 
