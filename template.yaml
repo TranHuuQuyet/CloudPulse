@@ -29,11 +29,6 @@ Globals:
         MONITORS_TABLE: !Ref MonitorsTable
         CHECK_RESULTS_TABLE: !Ref CheckResultsTable
         INCIDENTS_TABLE: !Ref IncidentsTable
-        SNS_TOPIC_ARN: !Ref CloudPulseAlertsTopic
-        CONSECUTIVE_FAILURES_THRESHOLD: "2"
-        TIMEOUT_MS: "5000"
-        TELEGRAM_BOT_TOKEN: !Ref TelegramBotToken
-        TELEGRAM_CHAT_ID: !Ref TelegramChatId
 
 Resources:
   # ==========================================
@@ -137,18 +132,31 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref IncidentsTable
       Events:
-        HttpApiProxy:
+        # Use explicit methods instead of ANY so API Gateway HTTP API handles OPTIONS CORS preflight directly
+        HttpApiGet:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
             Path: /{proxy+}
-            Method: ANY
+            Method: GET
+        HttpApiPost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /{proxy+}
+            Method: POST
+        HttpApiDelete:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /{proxy+}
+            Method: DELETE
         HttpApiRoot:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
             Path: /
-            Method: ANY
+            Method: GET
 
   # B. Health Checker Engine (Cron EventBridge)
   HealthCheckerFunction:
@@ -157,6 +165,13 @@ Resources:
       FunctionName: CloudPulse-HealthChecker
       Handler: CloudPulse.HealthChecker::CloudPulse.HealthChecker.Function::FunctionHandler
       CodeUri: ./backend/src/CloudPulse.HealthChecker/
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref CloudPulseAlertsTopic
+          CONSECUTIVE_FAILURES_THRESHOLD: "2"
+          TIMEOUT_MS: "5000"
+          TELEGRAM_BOT_TOKEN: !Ref TelegramBotToken
+          TELEGRAM_CHAT_ID: !Ref TelegramChatId
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref MonitorsTable
