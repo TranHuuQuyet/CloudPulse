@@ -14,6 +14,24 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddAWSLambdaHosting(
     LambdaEventSource.HttpApi);
 
+
+ // CORS dành riêng cho môi trường Development.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("LocalFrontend", policy =>
+        {
+            policy.WithOrigins(
+                    "http://localhost:3000",
+                    "http://localhost:5173")
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+    });
+}
+
+
 builder.Services.AddHttpClient("MonitorCheck", client =>
 {
     // Dành thời gian cho việc lưu kết quả vào DynamoDB.
@@ -64,6 +82,15 @@ builder.Services.AddScoped<IDynamoDBContext>(sp =>
 builder.Services.AddHttpClient();
 
 var app = builder.Build();
+
+
+ // Chỉ sử dụng CORS Local khi chạy Development.
+// AWS sẽ xử lý CORS thông qua API Gateway.
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("LocalFrontend");
+}
+
 
 app.MapGet("/api/status", () =>
 {
@@ -199,9 +226,14 @@ app.MapDelete("/api/monitors/{id}",
 app.MapGet("/api/monitors/{id}/checks",
     async (
         string id,
+        int? limit,
         IDynamoDBContext db,
         CancellationToken ct) =>
 {
+
+    // Mặc định 30 kết quả, giới hạn từ 1 đến 100.
+    int pageLimit = Math.Clamp(limit ?? 30, 1, 100);
+
     // 1. Kiểm tra Monitor tồn tại
     var monitor = await db.LoadAsync<MonitorItem>(
         id,
@@ -226,16 +258,16 @@ app.MapGet("/api/monitors/{id}/checks",
     // 3. Lấy kết quả
     var checks = new List<CheckResultItem>();
 
-    while (!search.IsDone && checks.Count < 30)
+    while (!search.IsDone && checks.Count < pageLimit)
     {
         var page = await search.GetNextSetAsync(ct);
 
         checks.AddRange(
-            page.Take(30 - checks.Count));
+            page.Take(pageLimit - checks.Count));
     }
     // 4. Trả về kết quả
     var chartData = checks
-        .Take(30)
+        .Take(pageLimit)
         .Reverse()
         .Select(FormatCheckChartPoint)
         .ToList();
@@ -246,9 +278,13 @@ app.MapGet("/api/monitors/{id}/checks",
 app.MapGet("/api/monitors/{id}/incidents",
     async (
         string id,
+        int? limit,
         IDynamoDBContext db,
         CancellationToken ct) =>
 {
+
+    // Mặc định 10 sự cố, giới hạn từ 1 đến 100.
+    int pageLimit = Math.Clamp(limit ?? 10, 1, 100);
     // 1. Kiểm tra Monitor có tồn tại không
     var monitor = await db.LoadAsync<MonitorItem>(
         id,
@@ -270,11 +306,20 @@ app.MapGet("/api/monitors/{id}/incidents",
             BackwardQuery = true
         });
 
-    // 3. Lấy kết quả
-    var incidents = await search.GetRemainingAsync(ct);
 
-    // 4. Trả về kết quả
+    // 3. Chỉ lấy tối đa số lượng sự cố được yêu cầu.
+    var incidents = new List<IncidentItem>();
+    while (!search.IsDone && incidents.Count < pageLimit)
+    {
+        var page = await search.GetNextSetAsync(ct);
+
+        incidents.AddRange(
+            page.Take(pageLimit - incidents.Count));
+    }
+
+    // 4. Trả về kết quả, mới nhất trước.
     return Results.Ok(incidents);
+
 });
 
 
