@@ -87,4 +87,32 @@ public class SnsAlertChannelTests
         var exception = await Record.ExceptionAsync(() => channel.SendAlertAsync(monitor, "DOWN", "error"));
         Assert.Null(exception);
     }
+
+    [Fact]
+    public async Task SendAlertAsync_WhenMonitorNameContainsNewlines_SanitizesSubjectWithoutNewlines()
+    {
+        // Arrange
+        string topicArn = "arn:aws:sns:us-east-1:123456789012:CloudPulse_Alerts";
+        var channel = new SnsAlertChannel(_mockSns.Object, topicArn: topicArn);
+        var monitor = new MonitorItem
+        {
+            MonitorId = "m1",
+            Name = "Monitor\r\nWith\nLine\rBreaks",
+            Url = "https://example.com"
+        };
+
+        PublishRequest? capturedRequest = null;
+        _mockSns.Setup(s => s.PublishAsync(It.IsAny<PublishRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<PublishRequest, CancellationToken>((req, _) => capturedRequest = req)
+            .ReturnsAsync(new PublishResponse());
+
+        // Act
+        await channel.SendAlertAsync(monitor, "DOWN", "Error message");
+
+        // Assert
+        Assert.NotNull(capturedRequest);
+        Assert.DoesNotContain("\r", capturedRequest!.Subject);
+        Assert.DoesNotContain("\n", capturedRequest.Subject);
+        Assert.Equal("[CloudPulse DOWN] Monitor With Line Breaks", capturedRequest.Subject);
+    }
 }

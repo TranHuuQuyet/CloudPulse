@@ -24,10 +24,14 @@ public class SnsAlertChannel : ISnsAlertChannel
             return;
         }
 
-        string subject = $"[CloudPulse {alertType}] {monitor.Name}";
-        if (subject.Length > 100)
+        string rawSubject = $"[CloudPulse {alertType}] {monitor.Name}";
+        string sanitizedSubject = rawSubject
+            .Replace("\r\n", " ")
+            .Replace("\r", " ")
+            .Replace("\n", " ");
+        if (sanitizedSubject.Length > 100)
         {
-            subject = subject.Substring(0, 97) + "...";
+            sanitizedSubject = sanitizedSubject.Substring(0, 97) + "...";
         }
 
         try
@@ -35,7 +39,7 @@ public class SnsAlertChannel : ISnsAlertChannel
             var request = new PublishRequest
             {
                 TopicArn = _topicArn,
-                Subject = subject,
+                Subject = sanitizedSubject,
                 Message = message
             };
 

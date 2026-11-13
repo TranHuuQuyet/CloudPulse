@@ -18,6 +18,9 @@ public class Function
     private readonly IHttpPingService _pingService;
     private readonly IStateMachineEngine _stateMachine;
     private readonly IAlertDispatcher _alertDispatcher;
+    private readonly int _consecutiveFailuresThreshold;
+
+    public int ConsecutiveFailuresThreshold => _consecutiveFailuresThreshold;
 
     /// <summary>
     /// Parameterless constructor for AWS Lambda runtime execution.
@@ -38,6 +41,7 @@ public class Function
         var snsChannel = new SnsAlertChannel(snsClient);
         var telegramChannel = new TelegramAlertChannel();
         _alertDispatcher = new AlertDispatcher(snsChannel, telegramChannel);
+        _consecutiveFailuresThreshold = ResolveConsecutiveFailuresThreshold();
     }
 
     /// <summary>
@@ -49,7 +53,8 @@ public class Function
         IIncidentRepository incidentRepository,
         IHttpPingService pingService,
         IStateMachineEngine stateMachine,
-        IAlertDispatcher alertDispatcher)
+        IAlertDispatcher alertDispatcher,
+        int? consecutiveFailuresThreshold = null)
     {
         _monitorRepository = monitorRepository ?? throw new ArgumentNullException(nameof(monitorRepository));
         _checkResultRepository = checkResultRepository ?? throw new ArgumentNullException(nameof(checkResultRepository));
@@ -57,6 +62,17 @@ public class Function
         _pingService = pingService ?? throw new ArgumentNullException(nameof(pingService));
         _stateMachine = stateMachine ?? throw new ArgumentNullException(nameof(stateMachine));
         _alertDispatcher = alertDispatcher ?? throw new ArgumentNullException(nameof(alertDispatcher));
+        _consecutiveFailuresThreshold = consecutiveFailuresThreshold ?? ResolveConsecutiveFailuresThreshold();
+    }
+
+    private static int ResolveConsecutiveFailuresThreshold()
+    {
+        var thresholdEnv = Environment.GetEnvironmentVariable("CONSECUTIVE_FAILURES_THRESHOLD");
+        if (int.TryParse(thresholdEnv, out var threshold) && threshold > 0)
+        {
+            return threshold;
+        }
+        return 2;
     }
 
     public async Task<string> FunctionHandler(object? input, ILambdaContext? context)
@@ -92,7 +108,7 @@ public class Function
                         monitor,
                         checkResult,
                         _incidentRepository,
-                        failureThreshold: 2);
+                        failureThreshold: _consecutiveFailuresThreshold);
 
                     // Update monitor table
                     await _monitorRepository.SaveMonitorAsync(monitor);

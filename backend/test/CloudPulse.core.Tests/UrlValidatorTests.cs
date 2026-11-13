@@ -91,6 +91,8 @@ public class UrlValidatorTests
     [Theory]
     [InlineData("http://[::1]:8080")]
     [InlineData("http://[fe80::1]")]
+    [InlineData("http://[::]")]
+    [InlineData("http://[::]:8080")]
     public async Task ValidateAsync_IPv6LoopbackAndLinkLocal_ReturnsInvalid(string url)
     {
         var result = await UrlValidator.ValidateAsync(url);
@@ -113,6 +115,8 @@ public class UrlValidatorTests
     [InlineData("100.64.0.1", true)] // Carrier-grade NAT
     [InlineData("0.0.0.0", true)]
     [InlineData("255.255.255.255", true)]
+    [InlineData("::", true)] // IPv6Any
+    [InlineData("::1", true)] // IPv6Loopback
     [InlineData("8.8.8.8", false)] // Public Google DNS
     [InlineData("1.1.1.1", false)] // Public Cloudflare DNS
     public void IsRestrictedIp_EvaluatesCorrectly(string ipString, bool expectedRestricted)
