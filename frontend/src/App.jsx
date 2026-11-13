@@ -99,7 +99,7 @@ export default function App() {
       const r = await checkNow(id);
       await load();
       showToast(
-        r.isSuccess ? `Kiểm tra OK: ${r.latencyMs} ms` : `Kiểm tra thất bại (${r.status})`,
+        r.isSuccess ? `Kiểm tra OK: ${r.latencyMs} ms` : `Kiểm tra thất bại (${r.statusCode ?? r.errorType ?? r.status})`,
         r.isSuccess ? "success" : "error"
       );
     } catch (error) { showToast(error.message, "error"); }
@@ -115,7 +115,13 @@ export default function App() {
         onAdd={() => setShowModal(true)}
       />
       <StatsOverview stats={stats} />
-      <MonitorList monitors={monitors} onCheck={handleCheck} onDelete={handleDelete} />
+      <MonitorList
+        monitors={monitors}
+        selectedId={monitorId}
+        onSelect={setSelectedMonitorId}
+        onCheck={handleCheck}
+        onDelete={handleDelete}
+      />
 
       <main className="mx-auto max-w-6xl px-4 pb-8">
         {loadError && <p role="alert" className="mb-4 text-red-700">{loadError}</p>}

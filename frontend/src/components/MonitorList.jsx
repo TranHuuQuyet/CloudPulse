@@ -26,7 +26,7 @@ function StatusBadge({ status }) {
   return <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${style}`}>{status}</span>;
 }
 
-export default function MonitorList({ monitors, onCheck, onDelete }) {
+export default function MonitorList({ monitors, selectedId, onSelect, onCheck, onDelete }) {
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState("ALL");
   const [checkingIds, setCheckingIds] = useState([]);
@@ -89,10 +89,23 @@ export default function MonitorList({ monitors, onCheck, onDelete }) {
         <ul className="grid gap-3">
           {visible.map((m) => {
             const checking = checkingIds.includes(m.id);
+            const selected = m.id === selectedId;
             return (
               <li
                 key={m.id}
-                className="flex min-w-0 flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                role="button"
+                tabIndex={0}
+                aria-pressed={selected}
+                onClick={() => onSelect?.(m.id)}
+                onKeyDown={(e) => {
+                  if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    onSelect?.(m.id);
+                  }
+                }}
+                className={`flex cursor-pointer flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between ${
+                  selected ? "border-sky-400 bg-sky-50/40 ring-2 ring-sky-100" : "border-slate-200 hover:border-slate-300"
+                }`}
               >
                 <div className="flex min-w-0 items-center gap-3">
                   <RadarPing status={m.status} />
@@ -110,7 +123,10 @@ export default function MonitorList({ monitors, onCheck, onDelete }) {
                     <span className="mr-2 font-mono text-xs text-slate-500">{m.latencyMs} ms</span>
                   )}
                   <button
-                    onClick={() => handleCheck(m.id)}
+                    onClick={(e) => {
+                      e.stopPropagation(); // bấm Check Now không đổi monitor đang chọn
+                      handleCheck(m.id);
+                    }}
                     disabled={checking}
                     className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-60"
                   >
@@ -118,7 +134,10 @@ export default function MonitorList({ monitors, onCheck, onDelete }) {
                     Check Now
                   </button>
                   <button
-                    onClick={() => handleDelete(m)}
+                    onClick={(e) => {
+                      e.stopPropagation(); // bấm Xóa không kích hoạt chọn
+                      handleDelete(m);
+                    }}
                     aria-label={`Xóa ${m.name}`}
                     className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-red-50 hover:text-red-600"
                   >
