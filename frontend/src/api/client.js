@@ -7,8 +7,18 @@ async function request(path, options) {
   // Vite forwards local /api requests to AWS; production calls the configured API.
   const base = import.meta.env.DEV ? "" : API_BASE;
   const response = await fetch(`${base}${path}`, { ...options, signal: AbortSignal.timeout(20000) });
-  if (!response.ok) throw new Error(`API ${response.status}: ${await response.text()}`);
-  return response.status === 204 ? null : response.json();
+  if (response.status === 204) return null; // No Content: không gọi response.json()
+  if (!response.ok) {
+    let message = `API ${response.status}`;
+    try {
+      const data = await response.json();
+      if (data?.message) message = data.message; // vd 400 SSRF: hiện thông điệp từ backend
+    } catch {
+      // phản hồi lỗi không phải JSON: giữ thông báo mặc định
+    }
+    throw new Error(message);
+  }
+  return response.json();
 }
 
 const monitorPath = (id) => `/api/monitors/${encodeURIComponent(id)}`;
@@ -78,22 +88,19 @@ export async function getMonitors() {
 }
 
 export async function getStats(currentMonitors) {
-  if (API_BASE) {
-    const items = currentMonitors ?? await getMonitors();
-    return {
-      uptimePercent: items.length ? Math.round(items.filter((m) => m.status === "UP").length / items.length * 1000) / 10 : 0,
-      openCritical: items.filter((m) => m.status === "DOWN").length,
-      endpointCount: items.length,
-      p95Ms: null,
-    };
-  }
-  await wait(200);
-  const up = monitors.filter((m) => m.status === "UP");
+  const items = currentMonitors ?? (await getMonitors());
+  const checked = items.filter((m) => m.status === "UP" || m.status === "DOWN");
+  const up = checked.filter((m) => m.status === "UP").length;
+  const latencies = items.map((m) => m.latencyMs).filter((v) => v > 0).sort((a, b) => a - b);
+  const p95Ms = latencies.length
+    ? latencies[Math.max(0, Math.ceil(latencies.length * 0.95) - 1)]
+    : null;
+
   return {
-    uptimePercent: monitors.length ? Math.round((up.length / monitors.length) * 1000) / 10 : 0,
-    openCritical: monitors.filter((m) => m.status === "DOWN").length,
-    endpointCount: monitors.length,
-    p95Ms: 312,
+    uptimePercent: checked.length ? Math.round((up / checked.length) * 1000) / 10 : 0,
+    openCritical: items.filter((m) => m.status === "DOWN").length,
+    endpointCount: items.length,
+    p95Ms,
   };
 }
 
@@ -114,8 +121,15 @@ export async function deleteMonitor(id) {
 // Giả lập Check Now + State Machine: lỗi 2 lần liên tiếp mới chuyển DOWN (AC-04)
 export async function checkNow(id) {
   if (API_BASE) {
-    const result = await request(`${monitorPath(id)}/check`, { method: "POST" });
-    return { ...result, latencyMs: result.responseTimeMs, status: result.status ?? result.errorType };
+    const data = await request(`${monitorPath(id)}/check`, { method: "POST" });
+    return {
+      id: data.monitorId,
+      isSuccess: data.isSuccess,
+      statusCode: data.statusCode,
+      latencyMs: data.responseTimeMs,
+      errorType: data.errorType,
+      errorMessage: data.errorMessage,
+    };
   }
   await wait(1000); // AC-08: phản hồi <= 2 giây
   const m = monitors.find((x) => x.id === id);
