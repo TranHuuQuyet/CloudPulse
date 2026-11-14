@@ -36,8 +36,8 @@ public static class UrlValidator
             return UrlValidationResult.Invalid(PrivateOrLoopbackErrorMessage, uri.Host);
         }
 
-        // Nếu Host nhập vào IP tĩnh trực tiếp (EX: http://192.168.1.1)
-        if (IPAddress.TryParse(uri.Host, out var ipAddress))
+        // Nếu Host nhập vào IP tĩnh trực tiếp (EX: http://192.168.1.1 hoặc IPv6 http://[::])
+        if (IPAddress.TryParse(uri.DnsSafeHost, out var ipAddress) || IPAddress.TryParse(uri.Host, out ipAddress))
         {
             if (IsRestrictedIp(ipAddress))
             {
@@ -86,6 +86,11 @@ public static class UrlValidator
         }
         // 1. Chặn Loopback (127.0.0.0/8 và ::1)
         if (IPAddress.IsLoopback(ip))
+        {
+            return true;
+        }
+        // Chặn địa chỉ bất định (Unspecified / Any): 0.0.0.0 và ::
+        if (ip.Equals(IPAddress.Any) || ip.Equals(IPAddress.IPv6Any))
         {
             return true;
         }

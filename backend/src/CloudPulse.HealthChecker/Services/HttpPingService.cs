@@ -11,14 +11,26 @@ public class HttpPingService : IHttpPingService
     private readonly TimeSpan _timeout;
     private readonly Func<string, CancellationToken, Task<UrlValidationResult>> _urlValidator;
 
+    public TimeSpan Timeout => _timeout;
+
     public HttpPingService(
         HttpClient? httpClient = null,
         TimeSpan? timeout = null,
         Func<string, CancellationToken, Task<UrlValidationResult>>? urlValidator = null)
     {
         _httpClient = httpClient ?? CreateDefaultHttpClient();
-        _timeout = timeout ?? TimeSpan.FromSeconds(5);
+        _timeout = timeout ?? ResolveDefaultTimeout();
         _urlValidator = urlValidator ?? UrlValidator.ValidateAsync;
+    }
+
+    private static TimeSpan ResolveDefaultTimeout()
+    {
+        var timeoutEnv = Environment.GetEnvironmentVariable("TIMEOUT_MS");
+        if (int.TryParse(timeoutEnv, out var ms) && ms > 0)
+        {
+            return TimeSpan.FromMilliseconds(ms);
+        }
+        return TimeSpan.FromMilliseconds(5000);
     }
 
     private static HttpClient CreateDefaultHttpClient()

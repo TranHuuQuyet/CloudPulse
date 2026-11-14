@@ -136,4 +136,94 @@ public class FunctionTests
         _mockMonitorRepo.Verify(r => r.SaveMonitorAsync(monitor2, It.IsAny<CancellationToken>()), Times.Once);
         _mockAlertDispatcher.Verify(a => a.DispatchAsync(monitor2, It.IsAny<StateTransitionResult>(), It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Theory]
+    [InlineData("3", 3)]
+    [InlineData("5", 5)]
+    public void Function_WhenConsecutiveFailuresThresholdEnvConfigured_UsesConfiguredThreshold(string envValue, int expectedThreshold)
+    {
+        var originalEnv = Environment.GetEnvironmentVariable("CONSECUTIVE_FAILURES_THRESHOLD");
+        try
+        {
+            Environment.SetEnvironmentVariable("CONSECUTIVE_FAILURES_THRESHOLD", envValue);
+            var function = new Function(
+                _mockMonitorRepo.Object,
+                _mockCheckResultRepo.Object,
+                _mockIncidentRepo.Object,
+                _mockPingService.Object,
+                _mockStateMachine.Object,
+                _mockAlertDispatcher.Object
+            );
+
+            Assert.Equal(expectedThreshold, function.ConsecutiveFailuresThreshold);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("CONSECUTIVE_FAILURES_THRESHOLD", originalEnv);
+        }
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("not-a-number")]
+    [InlineData("-2")]
+    [InlineData("0")]
+    public void Function_WhenConsecutiveFailuresThresholdEnvInvalidOrMissing_FallsBackTo2(string? envValue)
+    {
+        var originalEnv = Environment.GetEnvironmentVariable("CONSECUTIVE_FAILURES_THRESHOLD");
+        try
+        {
+            Environment.SetEnvironmentVariable("CONSECUTIVE_FAILURES_THRESHOLD", envValue);
+            var function = new Function(
+                _mockMonitorRepo.Object,
+                _mockCheckResultRepo.Object,
+                _mockIncidentRepo.Object,
+                _mockPingService.Object,
+                _mockStateMachine.Object,
+                _mockAlertDispatcher.Object
+            );
+
+            Assert.Equal(2, function.ConsecutiveFailuresThreshold);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("CONSECUTIVE_FAILURES_THRESHOLD", originalEnv);
+        }
+    }
+
+    [Fact]
+    public async Task FunctionHandler_PassesConfiguredThresholdToStateMachine()
+    {
+        // Arrange
+        var monitor = new MonitorItem { MonitorId = "mon-custom", Name = "Custom Monitor", Url = "https://custom.example.com" };
+        var monitors = new List<MonitorItem> { monitor };
+        var checkResult = new CheckResultItem { MonitorId = "mon-custom", IsSuccess = false };
+        var checkResults = new List<CheckResultItem> { checkResult };
+
+        _mockMonitorRepo.Setup(r => r.GetAllMonitorsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(monitors);
+        _mockPingService.Setup(p => p.PingAllAsync(monitors, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(checkResults);
+
+        _mockStateMachine.Setup(s => s.ProcessTransitionAsync(monitor, checkResult, _mockIncidentRepo.Object, 4, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StateTransitionResult(MonitorStatus.Up, MonitorStatus.Up, 1, false, false, false, false, null, null));
+
+        var function = new Function(
+            _mockMonitorRepo.Object,
+            _mockCheckResultRepo.Object,
+            _mockIncidentRepo.Object,
+            _mockPingService.Object,
+            _mockStateMachine.Object,
+            _mockAlertDispatcher.Object,
+            consecutiveFailuresThreshold: 4
+        );
+
+        // Act
+        var result = await function.FunctionHandler(null, _mockContext.Object);
+
+        // Assert
+        Assert.Equal("Completed checking 1 monitors.", result);
+        _mockStateMachine.Verify(s => s.ProcessTransitionAsync(monitor, checkResult, _mockIncidentRepo.Object, 4, It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

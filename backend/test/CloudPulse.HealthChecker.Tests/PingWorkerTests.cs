@@ -223,4 +223,60 @@ public class PingWorkerTests
         Assert.All(results, r => Assert.True(r.IsSuccess));
         Assert.True(maxConcurrentObserved > 1, $"Expected concurrent execution but observed max concurrency was {maxConcurrentObserved}");
     }
+
+    [Theory]
+    [InlineData("3000", 3000)]
+    [InlineData("10000", 10000)]
+    public void HttpPingService_WhenTimeoutMsEnvConfigured_UsesConfiguredTimeout(string envValue, int expectedMs)
+    {
+        var originalEnv = Environment.GetEnvironmentVariable("TIMEOUT_MS");
+        try
+        {
+            Environment.SetEnvironmentVariable("TIMEOUT_MS", envValue);
+            var pingService = new HttpPingService();
+            Assert.Equal(TimeSpan.FromMilliseconds(expectedMs), pingService.Timeout);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("TIMEOUT_MS", originalEnv);
+        }
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("not-a-number")]
+    [InlineData("-1000")]
+    [InlineData("0")]
+    public void HttpPingService_WhenTimeoutMsEnvInvalidOrMissing_FallsBackTo5000Ms(string? envValue)
+    {
+        var originalEnv = Environment.GetEnvironmentVariable("TIMEOUT_MS");
+        try
+        {
+            Environment.SetEnvironmentVariable("TIMEOUT_MS", envValue);
+            var pingService = new HttpPingService();
+            Assert.Equal(TimeSpan.FromMilliseconds(5000), pingService.Timeout);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("TIMEOUT_MS", originalEnv);
+        }
+    }
+
+    [Fact]
+    public void HttpPingService_ExplicitTimeoutConstructor_TakesPrecedenceOverEnv()
+    {
+        var originalEnv = Environment.GetEnvironmentVariable("TIMEOUT_MS");
+        try
+        {
+            Environment.SetEnvironmentVariable("TIMEOUT_MS", "8000");
+            var explicitTimeout = TimeSpan.FromSeconds(2);
+            var pingService = new HttpPingService(timeout: explicitTimeout);
+            Assert.Equal(explicitTimeout, pingService.Timeout);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("TIMEOUT_MS", originalEnv);
+        }
+    }
 }
