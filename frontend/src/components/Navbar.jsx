@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { RefreshCw, Plus, Activity } from "lucide-react";
 
+const vietnamClockFormat = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+  timeZone: "Asia/Ho_Chi_Minh",
+});
+
 export default function Navbar({ region, cron, onSync, onAdd, syncing }) {
   const [now, setNow] = useState(new Date());
 
@@ -9,7 +17,7 @@ export default function Navbar({ region, cron, onSync, onAdd, syncing }) {
     return () => clearInterval(t);
   }, []);
 
-  const utc = now.toISOString().slice(11, 19);
+  const timeText = `${vietnamClockFormat.format(now)} (UTC+7)`;
 
   return (
     <nav className="sticky top-0 z-20 border-b border-slate-200 bg-white/80 backdrop-blur">
@@ -21,7 +29,7 @@ export default function Navbar({ region, cron, onSync, onAdd, syncing }) {
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="rounded-full bg-slate-100 px-3 py-1 font-mono text-slate-700">
-            UTC {utc}
+            {timeText}
           </span>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">{region}</span>
           <span className="rounded-full bg-slate-100 px-3 py-1 font-mono text-slate-700">{cron}</span>
