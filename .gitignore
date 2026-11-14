@@ -569,4 +569,8 @@ specs/
 AGENTS.md
 CLAUDE.md
 
+# AWS SAM config & local tool cache
+samconfig.toml
+Library/
+
 
