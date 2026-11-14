@@ -1,0 +1,10 @@
+{
+  "output": "docs\\report\\CloudPulse_BaoCao_TV5_Tuan3.docx",
+  "paragraphs": 232,
+  "tables": 44,
+  "embedded_images": 11,
+  "chapters": 6,
+  "source_test_run": "2026-11-11T08:34:40.030Z",
+  "validation": "DOCX reopened successfully; chapter headings, tables and embedded images checked.",
+  "rendering": "Microsoft Word / LibreOffice not installed; pagination has not been visually rendered. Update TOC and review page breaks in Word."
+}
