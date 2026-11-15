@@ -77,13 +77,17 @@
 | **W3-06** | Kiểm tra Cron 1 phút & State Machine trên AWS | ✅ **100% Xong** | Kiểm chứng EventBridge gọi `CloudPulse-HealthChecker` đều đặn mỗi 60s (`17:22:37Z` → `17:26:37Z`). Thử nghiệm endpoint lỗi `HTTP 500`: đạt ngưỡng 2 lần liên tiếp → chuyển `DOWN`, tự mở Incident `OPEN` (`INC-1794331417140`), bắn **đúng 1 Email SNS + 1 tin nhắn Telegram 🚨** lúc `17:23:37 UTC` (`00:23` VN) và không spam ở lượt 3+. |
 | **Điều phối** | Giao Issue Tuần 3 cho TV1–TV5 & API Contract | ✅ **100% Xong** | Đã chốt API Contract giữa `CloudPulse.Api` và Frontend, nghiệm thu và merge PR #29 (TV3), PR #30 (TV4), PR #31 (TV2), PR #28 (TV5) sạch sẽ vào nhánh `develop`. |
 | **W3-07** | Build Frontend production & Deploy S3 Hosting | ✅ **100% Xong** | Đã tạo S3 Bucket `cloudpulse-dashboard-tv1` tại `ap-southeast-1`, bật tính năng Static Website Hosting, mở Bucket Policy Public Read và đồng bộ `frontend/dist/`. Trang web chính thức online tại: `http://cloudpulse-dashboard-tv1.s3-website-ap-southeast-1.amazonaws.com`, đồng bộ giờ Việt Nam (UTC+7). |
+| **W3-08** | Gắn Tên Miền Tùy Chỉnh `clpulse.cloud` qua Cloudflare CDN | ✅ **100% Xong** | Mua domain `clpulse.cloud` tại P.A Vietnam, chuyển Nameservers về Cloudflare (`dion.ns.cloudflare.com`, `elle.ns.cloudflare.com`). Cấu hình SSL Flexible xử lý dứt điểm lỗi 522, dùng **Cloudflare Cloud Connector** giải quyết lỗi Host Header `NoSuchBucket` của S3. Website hoạt động mượt mà với chứng chỉ HTTPS bảo mật tại: `https://clpulse.cloud`. |
+| **W3-09** | Xử lý Sự cố Vận hành Thực chiến & Xác minh KYC với AWS | ✅ **100% Xong** | Phát hiện và truy vết lỗi `Internal Server Error` bằng CloudWatch Metrics/CloudTrail (xác định thời điểm Lambda bị AWS Trust & Safety tạm giữ lúc 20:46 ngày 14/11 do cron 1m chạy liên tục). Nhanh chóng chuẩn bị hồ sơ KYC gồm Sao kê Techcombank (PDF) + CCCD 2 mặt tải lên cổng bảo mật `upload.aws.amazon.com`, nhận email xác nhận thụ lý từ AWS. |
 
 ### 2. Thông số Stack đã triển khai thực tế (`cloudpulse-app`)
-* **Region**: `ap-southeast-1`
+* **Region**: `ap-southeast-1` (Singapore)
+* **Custom Domain (Production)**: `https://clpulse.cloud` (Bảo mật SSL/TLS qua Cloudflare Edge)
+* **Frontend S3 Website (Origin)**: `http://cloudpulse-dashboard-tv1.s3-website-ap-southeast-1.amazonaws.com`
 * **ApiEndpoint**: `https://ex9kcfdj5a.execute-api.ap-southeast-1.amazonaws.com`
 * **MockTargetEndpoint**: `https://ex9kcfdj5a.execute-api.ap-southeast-1.amazonaws.com/mock`
 * **AlertsTopicArn**: `arn:aws:sns:ap-southeast-1:180459766853:CloudPulse_Alerts`
-* **Frontend S3 Website**: `http://cloudpulse-dashboard-tv1.s3-website-ap-southeast-1.amazonaws.com`
+* **Cloudflare Nameservers**: `dion.ns.cloudflare.com`, `elle.ns.cloudflare.com`
 
 ### 3. Checklist tiến độ Tuần 3
 - [x] **W3-01**: Chạy `sam build` và `sam deploy --guided` lên AWS cá nhân (`cloudpulse-app`).
@@ -91,6 +95,8 @@
 - [x] **W3-03**: Xác nhận link "Confirm Subscription" từ email do Amazon SNS gửi về.
 - [x] **W3-06**: Kiểm tra EventBridge kích hoạt `HealthChecker` mỗi 1 phút và nghiệm thu luồng `UP/UNKNOWN -> DOWN`, mở Incident & bắn SNS/Telegram không spam.
 - [x] **W3-07**: Build frontend production và deploy lên S3 Hosting (`http://cloudpulse-dashboard-tv1.s3-website-ap-southeast-1.amazonaws.com`).
+- [x] **W3-08**: Cấu hình tên miền tùy chỉnh `https://clpulse.cloud`, thiết lập Cloudflare CDN, SSL Flexible và Cloud Connector định tuyến S3.
+- [x] **W3-09**: Xử lý sự cố vận hành thực tế (Incident Management), truy vết lỗi CloudWatch/CloudTrail và hoàn tất nộp hồ sơ KYC mở khóa AWS Lambda.
 
 ---
 
@@ -123,4 +129,24 @@
 ### Câu 4: Nhóm đã triển khai và kiểm chứng hệ thống trên AWS thực tế như thế nào ở Tuần 3?
 > **Trả lời mẫu**:  
 > *"Dạ thưa Thầy/Cô, ở Tuần 3 em đã hợp nhất mã nguồn của cả 5 thành viên lên nhánh `develop` và dùng `sam build && sam deploy --guided` triển khai stack `cloudpulse-app` lên region `ap-southeast-1`. Các thông số nhạy cảm như `TelegramBotToken` được truyền qua CloudFormation Parameter (`NoEcho: true`) thay vì hard-code vào Git hay `samconfig.toml`. Sau khi xác nhận SNS Email Subscription, em đã dùng chính `MockTarget` giả lập lỗi `HTTP 500` để kiểm chứng trực tiếp trên AWS thật: EventBridge tự kích hoạt `HealthChecker` đúng mỗi 60 giây, sau đúng 2 lần lỗi liên tiếp hệ thống chuyển `DOWN`, tự mở Incident `OPEN` trong DynamoDB và gửi đồng thời 1 Email SNS kèm 1 tin nhắn Telegram mà không bị gửi trùng lặp ở các phút kế tiếp."*
+
+### Câu 5: Tại sao nhóm lại sử dụng Cloudflare đứng trước AWS S3 và giải quyết các bài toán hạ tầng như thế nào?
+> **Trả lời mẫu**:  
+> *"Dạ thưa Thầy/Cô, việc đặt **Cloudflare CDN** làm Reverse Proxy đứng trước **AWS S3 Static Website** mang lại 3 giá trị kiến trúc cốt lõi:
+> 1. **Bảo mật và Tối ưu Chi phí**: S3 Static Website mặc định chỉ hỗ trợ HTTP (cổng 80). Nếu dùng AWS CloudFront để cấp SSL thì sẽ phát sinh cấu hình chứng chỉ ACM phức tạp. Đặt Cloudflare đứng trước giúp cấp chứng chỉ **HTTPS miễn phí**, đồng thời CDN toàn cầu giúp giảm thiểu chi phí Data Transfer Out (Egress) của S3 về \$0.
+> 2. **Xử lý sự cố SSL (Lỗi 522)**: Vì S3 Website không hỗ trợ HTTPS cổng 443 ở phía origin, em đã cấu hình Cloudflare SSL ở chế độ **Flexible** (người dùng vào `https://clpulse.cloud` bằng cổng 443 an toàn, còn Cloudflare kết nối về S3 qua cổng 80).
+> 3. **Xử lý sự cố Host Header (Lỗi 404 NoSuchBucket)**: S3 sử dụng HTTP Host Header để phân giải tên bucket. Vì tên miền `clpulse.cloud` khác với tên bucket `cloudpulse-dashboard-tv1`, em đã cấu hình **Cloudflare Cloud Connector** để tự động map domain vào đúng endpoint S3 của dự án."*
+
+### Câu 6: Trong quá trình vận hành hệ thống Serverless, em đã phát hiện và xử lý sự cố thực tế (Incident Management) như thế nào?
+> **Trả lời mẫu**:  
+> *"Dạ thưa Thầy/Cô, một tình huống thực chiến rất thú vị mà nhóm em đã trải qua là cơ chế rà soát bảo mật tự động của AWS (Trust & Safety / Fraud Detection). Khi hàm `HealthChecker` chạy cron liên tục mỗi 1 phút để ping kiểm tra các website, AWS đã tạm đặt tài khoản vào trạng thái `On Hold` để xác minh danh tính.  
+> - Em đã dùng công cụ **CloudWatch Metrics** và **CloudTrail** để điều tra nguyên nhân gốc rễ (Root Cause Analysis), xác định chính xác thời điểm các hàm Lambda bị chặn gọi API (`AccessDeniedException: None` lúc 20:46 tối 14/11), trong khi các tài nguyên lưu trữ như DynamoDB và S3 vẫn nguyên vẹn.  
+> - Ngay sau đó, em đã phối hợp cùng AWS Support, chuẩn bị đầy đủ hồ sơ KYC gồm Sao kê ngân hàng Techcombank (Bank statement PDF) và Căn cước công dân nộp lên cổng bảo mật `upload.aws.amazon.com`. Đây là một bài học thực chiến vô cùng quý báu về quy trình vận hành và ứng cứu sự cố trên môi trường Cloud thực tế của doanh nghiệp."*
+
+### Câu 7: Chiến lược FinOps của nhóm đã giúp tiết kiệm chi phí như thế nào?
+> **Trả lời mẫu**:  
+> *"Dạ thưa Thầy/Cô, nhóm em áp dụng triệt để văn hóa **FinOps (Cloud Financial Operations)**:
+> 1. **Serverless 100%**: Sử dụng DynamoDB chế độ **On-Demand (Pay-per-request)**, Lambda chỉ tính phí trên từng millisecond thực thi, S3 Static Website chỉ tốn vài kilobyte lưu trữ.
+> 2. **Dọn dẹp tự động (TTL)**: Cấu hình DynamoDB TTL 7 ngày trên bảng `CheckResults` để dữ liệu cũ tự hủy, không tích lũy dung lượng rác.
+> 3. **Kết quả nghiệm thu**: Hóa đơn tháng 11/2026 của AWS đạt đúng **$0.00 USD**, toàn bộ gói Credit tài trợ $120.00 vẫn được bảo toàn nguyên vẹn $119.97 mà hệ thống vẫn duy trì khả năng sẵn sàng cao."*
 
