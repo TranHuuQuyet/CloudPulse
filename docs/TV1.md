@@ -14,7 +14,8 @@
 2. [TUẦN 2: Cấu Hình IAM Least Privilege, SNS Subscription & Kênh Telegram](#-tuần-2-cấu-hình-iam-least-privilege-sns-subscription--kênh-telegram)
 3. [TUẦN 3: Triển Khai AWS Thật (sam deploy) & Ghép Nối Toàn Hệ Thống](#-tuần-3-triển-khai-aws-thật-sam-deploy--ghép-nối-toàn-hệ-thống)
 4. [TUẦN 4: Diễn Tập Demo 7 Bước, Nghiệm Thu Báo Cáo & Bảo Vệ Đồ Án](#-tuần-4-diễn-tập-demo-7-bước-nghiệm-thu-báo-cáo--bảo-vệ-đồ-án-kế-hoạch)
-5. [Cẩm Nang Vấn Đáp Với Giảng Viên (Q&A Chấm Điểm A+)](#-cẩm-nang-vấn-đáp-với-giảng-viên-qa-chấm-điểm-a)
+5. [CHUYÊN ĐỀ KIẾN TRÚC CLOUD & NỀN TẢNG DỊCH VỤ AWS (BẢO VỆ ĐỒ ÁN)](#-chuyên-đề-kiến-trúc-cloud--nền-tảng-dịch-vụ-aws-bảo-vệ-đồ-án)
+6. [Cẩm Nang Vấn Đáp Với Giảng Viên (Q&A Chấm Điểm A+)](#-cẩm-nang-vấn-đáp-với-giảng-viên-qa-chấm-điểm-a)
 
 ---
 
@@ -107,6 +108,164 @@
 - [x] **W4-03**: Thu thập bằng chứng FinOps hóa đơn AWS $0.00 USD và chi tiết Credit tài trợ $120.00 còn nguyên $119.97 (lưu tại docs/evidence/ và docs/report/assets/e07-*).
 - [ ] **W4-07**: Tổng duyệt thuyết trình (Dry Run 15 phút).
 - [ ] **W4-08**: BẢO VỆ ĐỒ ÁN & Chạy lệnh `sam delete` dọn sạch toàn bộ tài nguyên trên AWS.
+
+---
+
+## 🏛️ CHUYÊN ĐỀ KIẾN TRÚC CLOUD & NỀN TẢNG DỊCH VỤ AWS (BẢO VỆ ĐỒ ÁN)
+> **Mục tiêu chuyên đề**: Cung cấp bức tranh toàn cảnh về thiết kế kiến trúc Serverless, phân tích chuyên sâu lý do lựa chọn từng dịch vụ Cloud, luồng dữ liệu (Data Flow) và sự đánh đổi (Trade-offs) để toàn bộ 5 thành viên trong nhóm đều hiểu sâu, tự tin thuyết trình và trả lời xuất sắc mọi câu hỏi phản biện của Giảng viên.
+
+### 1. Sơ đồ Kiến trúc Tổng thể (System Architecture Diagram)
+
+Hệ thống CloudPulse được thiết kế theo mô hình **Serverless 100% (Event-Driven Microservices)**, tách biệt hoàn toàn giữa tầng Trình diễn (Frontend), tầng Giao tiếp (API Gateway), tầng Tính toán (Lambda Compute), tầng Lưu trữ (DynamoDB) và tầng Cảnh báo (SNS / Telegram):
+
+```mermaid
+flowchart TD
+    subgraph EdgeTier ["🌐 1. TẦNG BIÊN & PHÂN PHỐI (EDGE / CDN LAYER)"]
+        User["Người dùng cuối (Trình duyệt)"]
+        Domain["Tên miền tùy chỉnh: clpulse.cloud"]
+        Cloudflare["Cloudflare Edge CDN\n(SSL Flexible, DDoS Protection, Caching)"]
+        CloudConnector["Cloudflare Cloud Connector\n(Rewrite Host Header sang S3)"]
+        
+        User -->|"HTTPS (Port 443)"| Domain
+        Domain --> Cloudflare
+        Cloudflare --> CloudConnector
+    end
+
+    subgraph FrontendTier ["📦 2. TẦNG LƯU TRỮ GIAO DIỆN (STATIC HOSTING)"]
+        S3["AWS S3 Bucket: cloudpulse-dashboard-tv1\n(Static Website Hosting, Public Read, React SPA)"]
+        CloudConnector -->|"HTTP (Port 80)"| S3
+        S3 -.->|"Trả về Single Page App (index.html, JS, CSS)"| User
+    end
+
+    subgraph ApiTier ["🚪 3. TẦNG ĐIỀU PHỐI API (API GATEWAY)"]
+        HttpApi["Amazon API Gateway v2 (HTTP API)\n(Endpoint: ex9kcfdj5a, Native CORS 204)"]
+        User -->|"REST API Call: /api/monitors"| HttpApi
+    end
+
+    subgraph ComputeTier ["⚡ 4. TẦNG XỬ LÝ SERVERLESS (AWS LAMBDA)"]
+        ApiLambda["Lambda: CloudPulse-Api\n(.NET 8 Minimal API, xử lý CRUD & Thống kê)"]
+        HealthLambda["Lambda: CloudPulse-HealthChecker\n(.NET 8 Worker, State Machine, HTTP Client)"]
+        MockLambda["Lambda: CloudPulse-MockTarget\n(Giả lập HTTP 200 / 500 phục vụ diễn tập)"]
+        
+        HttpApi -->|"Proxy Integration"| ApiLambda
+        HttpApi -->|"Route: /mock"| MockLambda
+    end
+
+    subgraph EventTier ["⏰ 5. TẦNG LẬP LỊCH TỰ ĐỘNG (EVENT-DRIVEN)"]
+        EventBridge["Amazon EventBridge Rule\nrate(1 minute) cron kích hoạt tự động"]
+        EventBridge -->|"Kích hoạt chu kỳ mỗi 60s"| HealthLambda
+    end
+
+    subgraph DatabaseTier ["🗄️ 6. TẦNG CƠ SỞ DỮ LIỆU (DATABASE - NOSQL)"]
+        TableMonitors[("DynamoDB: CloudPulse_Monitors\n(PK: monitorId - Lưu danh sách giám sát)")]
+        TableChecks[("DynamoDB: CloudPulse_CheckResults\n(PK: monitorId, SK: checkedAt, TTL 7 ngày)")]
+        TableIncidents[("DynamoDB: CloudPulse_Incidents\n(PK: monitorId, SK: incidentId)")]
+        
+        ApiLambda <-->|"Đọc/Ghi danh sách, sự cố"| TableMonitors
+        ApiLambda <-->|"Đọc lịch sử đo độ trễ"| TableChecks
+        ApiLambda <-->|"Đọc sự cố mở/đóng"| TableIncidents
+        
+        HealthLambda -->|"Đọc danh sách URLs cần ping"| TableMonitors
+        HealthLambda -->|"Ghi kết quả đo độ trễ & trạng thái"| TableChecks
+        HealthLambda -->|"Mở / Đóng sự cố theo State Machine"| TableIncidents
+    end
+
+    subgraph TargetTier ["🎯 7. MỤC TIÊU GIÁM SÁT (TARGETS)"]
+        Targets["Các Website / API mục tiêu\n(Google, MockTarget, Web nội bộ)"]
+        HealthLambda -->|"Gửi HTTP GET Ping & Đo Latency"| Targets
+    end
+
+    subgraph AlertTier ["🚨 8. TẦNG THÔNG BÁO & BÁO ĐỘNG (ALERTING & FAN-OUT)"]
+        SnsTopic["Amazon SNS Topic: CloudPulse_Alerts"]
+        EmailSub["SNS Email Subscription\n(huuquyet120406@gmail.com)"]
+        TelegramBot["Telegram Bot API\n(Group: CloudPulse Demo Alerts, Call/Vibrate)"]
+        
+        HealthLambda -->|"DOWN sau 2 lỗi liên tiếp\nhoặc UP khi phục hồi"| SnsTopic
+        HealthLambda -->|"Bắn tin nhắn nảy chuông điện thoại"| TelegramBot
+        SnsTopic -->|"Fan-out Email"| EmailSub
+    end
+```
+
+---
+
+### 2. Phân tích Chuyên sâu 7 Dịch vụ Cloud cốt lõi (Cloud Services Deep Dive)
+
+Dưới đây là bảng phân tích chi tiết từng dịch vụ đám mây, giải thích tường minh **Vai trò**, **Lý do lựa chọn** và **Sự đánh đổi kỹ thuật (Trade-offs)**:
+
+| STT | Tên Dịch Vụ Cloud | Vai Trò Trong Hệ Thống | Tại Sao Chọn Dịch Vụ Này? (Lý Do Kiến Trúc) | So Sánh & Sự Đánh Đổi (Trade-offs) |
+| :-: | :--- | :--- | :--- | :--- |
+| **1** | **AWS Lambda** (.NET 8) | Trái tim xử lý tính toán (Compute Layer): gồm API Handler, Health Checker và Mock Target. | • **Zero Idle Cost**: Khi không có request, chi phí tính toán đúng \$0.00.<br>• **Tự động mở rộng (Auto-scaling)**: Có thể chịu tải từ 1 đến hàng nghìn request/giây mà không cần quản trị máy chủ (Serverless).<br>• **Tốc độ .NET 8**: Tối ưu hiệu năng, runtime hiện đại, hỗ trợ native async/await. | **So với EC2 / Virtual Machine**:<br>• EC2 phải trả tiền 24/7 dù rảnh rỗi, phải tự cấu hình Auto Scaling Group, vá lỗ hổng HĐH Linux.<br>• *Đánh đổi*: Lambda có hiện tượng Cold Start (khoảng 800ms – 1.2s ở lần gọi đầu tiên), nhưng sau đó chỉ mất ~20–50ms. |
+| **2** | **Amazon DynamoDB** (NoSQL) | Cơ sở dữ liệu chính: lưu Monitors, kết quả kiểm tra (CheckResults) và sự cố (Incidents). | • **Độ trễ thấp vượt trội**: Tốc độ phản hồi đơn vị mili-giây (single-digit ms) ở mọi quy mô dữ liệu.<br>• **Chế độ On-Demand**: Tự co giãn theo dung lượng đọc/ghi (Pay-per-request), không lo over-provisioning.<br>• **Tính năng TTL (Time-To-Live)**: Tự động xóa kết quả kiểm tra cũ sau 7 ngày mà không tốn tài nguyên chạy script dọn dẹp. | **So với RDS (MySQL / PostgreSQL)**:<br>• RDS tốn tối thiểu \$15–\$25/tháng, phải duy trì kết nối connection pool và quản trị cluster.<br>• *Đánh đổi*: DynamoDB không hỗ trợ JOIN bảng phức tạp, đòi hỏi thiết kế Single-Table hoặc Query theo Partition Key/Sort Key định sẵn. |
+| **3** | **Amazon API Gateway v2** (HTTP API) | Cửa ngõ kết nối (Routing Layer) giữa người dùng và Backend Lambda. | • **Tối ưu chi phí & Tốc độ**: Rẻ hơn **71%** và độ trễ thấp hơn đáng kể so với REST API v1.<br>• **Xử lý CORS tự động**: Tự động chặn và trả về mã `204 No Content` cho các preflight `OPTIONS` ngay tại tầng Gateway, **không chuyển tiếp vào Lambda**, giúp tiết kiệm 100% chi phí tính toán cho các request CORS. | **So với Application Load Balancer (ALB) hoặc API Gateway v1**:<br>• ALB tốn tối thiểu \$16–\$20/tháng phí duy trì cố định.<br>• API Gateway v1 có quá nhiều tính năng nặng nề (XML transformation, API Keys) không cần thiết cho ứng dụng REST hiện đại. |
+| **4** | **Amazon EventBridge** (Rule 1m) | Bộ điều phối lập lịch (Scheduler / Event-Driven Layer). | • **Tin cậy chuẩn Enterprise**: Kích hoạt hàm kiểm tra chính xác mỗi 60 giây theo mô hình hướng sự kiện (Event-driven).<br>• **Tách rời (Decoupling)**: Hàm Lambda không cần chạy vòng lặp vô tận `while(true) sleep(60)`, giúp giải phóng bộ nhớ và tài nguyên. | **So với Linux Crontab trên EC2**:<br>• Crontab phụ thuộc vào một máy chủ duy nhất (Single Point of Failure), nếu máy chủ crash thì toàn bộ hệ thống giám sát ngừng hoạt động.<br>• EventBridge là dịch vụ phân tán toàn vùng, đảm bảo SLA 99.99%. |
+| **5** | **Amazon SNS** (Simple Notification Service) | Kênh cảnh báo email đa điểm (Notification Fan-out). | • **Mô hình Xuất bản - Đăng ký (Pub/Sub)**: Hàm Lambda chỉ cần bắn 1 message vào Topic, SNS sẽ tự động phát tán (fan-out) tới danh sách email quản trị viên.<br>• **Tự động hóa bằng IaC**: Khai báo trực tiếp `AWS::SNS::Subscription` trong file SAM, tự động liên kết khi deploy. | **So với tự gọi SMTP Server gửi email từ Lambda**:<br>• Tự gọi SMTP dễ bị nghẽn I/O làm kéo dài thời gian chạy của Lambda (tốn thêm tiền), hoặc bị Gmail chặn IP vì spam.<br>• SNS là dịch vụ chuẩn của AWS, đảm bảo tỷ lệ gửi thư thành công cao. |
+| **6** | **AWS S3** (Static Website Hosting) | Lưu trữ và phân phối mã nguồn giao diện (Frontend React/Vite SPA). | • **Độ bền dữ liệu 99.999999999% (11 số 9)**.<br>• **Siêu rẻ**: Lưu trữ toàn bộ mã nguồn build (~500 KB) với chi phí gần như \$0.00.<br>• Hỗ trợ cấu hình `index.html` và `error.html` chuẩn Single Page Application. | **So với việc dựng Web Server Nginx/Apache trên EC2**:<br>• Nginx cần máy chủ chạy liên tục, cần bảo trì bảo mật và cập nhật OS.<br>• S3 lưu file dạng Object Storage, không có khái niệm máy chủ bị sập hay bị hack chiếm quyền điều khiển shell. |
+| **7** | **Cloudflare CDN & Cloud Connector** | Reverse Proxy, Tường lửa, Cấp SSL HTTPS và Định tuyến S3. | • **Cấp chứng chỉ SSL/TLS miễn phí** cho tên miền tùy chỉnh `clpulse.cloud`.<br>• **Xóa bỏ chi phí Egress của S3**: Mạng lưới CDN toàn cầu lưu cache tài nguyên tĩnh, giảm số lần truy vấn trực tiếp vào S3.<br>• **Cloud Connector**: Giải quyết triệt để bài toán Host Header mismatch giữa domain ngoài và S3 bucket. | **So với AWS CloudFront**:<br>• CloudFront yêu cầu khởi tạo chứng chỉ ACM ở region `us-east-1` phức tạp và có thể phát sinh phí Data Transfer Out nếu vượt quota.<br>• Cloudflare cung cấp gói Free toàn diện cho sinh viên và dự án khởi nghiệp. |
+
+---
+
+### 3. Các Quyết định Thiết kế then chốt (Key Architectural Decisions & ADR)
+
+#### 🎯 ADR-01: Kiến trúc Serverless-First thay vì Máy chủ nguyên khối (Monolith)
+* **Bối cảnh**: Hệ thống giám sát website cần chạy bền bỉ 24/7 nhưng lưu lượng truy cập bảng điều khiển (Dashboard) của quản trị viên chỉ diễn ra theo đợt.
+* **Quyết định**: Sử dụng toàn bộ hệ sinh thái Serverless (API Gateway + Lambda + DynamoDB).
+* **Hiệu quả**: 
+  * Chi phí vận hành khi hệ thống ở trạng thái rỗi đúng bằng **\$0.00**.
+  * Không tốn nhân sự bảo trì máy chủ, vá lỗi kernel hay cấu hình mạng phức tạp.
+  * Khả năng chịu lỗi cao (Fault Tolerance): Mọi dịch vụ đều tự động chạy phân tán trên tối thiểu 3 Availability Zones (AZs) trong Region Singapore (`ap-southeast-1`).
+
+#### 🎯 ADR-02: Thiết kế Cơ sở dữ liệu NoSQL DynamoDB với TTL tự động dọn rác
+* **Bối cảnh**: Cứ mỗi 1 phút hệ thống ghi lại kết quả đo độ trễ của nhiều website. Sau một vài tháng, số lượng bản ghi kiểm tra có thể lên tới hàng triệu dòng, gây phình to dung lượng và làm chậm tốc độ truy vấn.
+* **Quyết định**: 
+  * Bảng `CloudPulse_CheckResults` sử dụng khóa chính kết hợp: **Partition Key (`monitorId`)** và **Sort Key (`checkedAt`)**.
+  * Bật tính năng **DynamoDB Time-To-Live (TTL)** trên trường `expireAt = checkedAt + 7 days`.
+* **Hiệu quả**: 
+  * Truy vấn lịch sử 30 lần đo gần nhất chỉ mất **~5–10ms** bằng cách quét ngược Sort Key.
+  * AWS tự động quét và xóa các bản ghi quá hạn 7 ngày hoàn toàn miễn phí ngầm dưới nền, giúp dung lượng cơ sở dữ liệu luôn giữ ở mức tối thiểu (Zero Data Bloat).
+
+#### 🎯 ADR-03: Bộ máy Trạng thái (State Machine) chống Bão Cảnh Báo (Alert Fatigue)
+* **Bối cảnh**: Nếu một website bị sập trong 2 tiếng, nếu cứ mỗi 1 phút cron ping lỗi lại gửi 1 email và 1 tin nhắn Telegram thì quản trị viên sẽ nhận 120 thông báo liên tục (gây "bão cảnh báo" và spam hòm thư).
+* **Quyết định**: Cài đặt thuật toán State Machine với ngưỡng 2 lần thất bại liên tiếp:
+  * `UP/UNKNOWN` ➔ Lỗi lần 1: Giữ nguyên trạng thái `consecutiveFailures = 1` (chưa báo động vì có thể do mạng chập chờn nhất thời).
+  * Lỗi lần 2 liên tiếp: Chuyển trạng thái sang `DOWN`, ghi nhận sự cố mới `INC-...` trạng thái `OPEN`, bắn **đúng 1 Email SNS + 1 tin nhắn Telegram**.
+  * Các lần lỗi thứ 3, 4, 5... tiếp theo: Tiếp tục duy trì `DOWN` nhưng **tuyệt đối KHÔNG gửi thêm cảnh báo**.
+  * Khi website hồi phục (HTTP 200): Tự động chuyển `UP`, cập nhật Incident thành `RESOLVED`, tính tổng thời gian chết (`downtimeSeconds`) và bắn duy nhất 1 thông báo phục hồi `[CloudPulse RECOVERED]`.
+
+#### 🎯 ADR-04: Chiến lược Cảnh báo Kênh Đôi (Dual-Channel Alerting)
+* **Email qua Amazon SNS**: Đảm bảo tính lưu trữ chính thức, có nhật ký phục vụ báo cáo kiểm toán kỹ thuật cho doanh nghiệp.
+* **Telegram Bot qua Webhook**: Tận dụng thông báo đẩy tức thời (Push Notification) nảy chuông và rung điện thoại thông minh của kỹ sư trực vận hành trong vòng **dưới 1 giây** kể từ khi phát hiện sự cố.
+
+---
+
+### 4. Câu hỏi "Bẫy" của Giảng viên về Kiến trúc Cloud & Cách Trả Lời Điểm 10
+
+#### 💣 Câu hỏi 1: "Tại sao nhóm không thuê 1 con VPS / EC2 cài Linux chạy Node.js/C# và MySQL cho đơn giản, tại sao phải chia nhỏ ra nhiều dịch vụ Cloud thế này?"
+> **Trả lời mẫu (Thuyết phục hoàn toàn)**:  
+> *"Dạ thưa Thầy/Cô, việc cài tất cả vào một máy chủ EC2 là tư duy triển khai truyền thống (Monolithic on Virtual Machine). Nhóm em chọn kiến trúc Serverless Microservices vì 3 lý do sống còn trong môi trường Cloud Computing:  
+> 1. **Khả năng chịu lỗi (No Single Point of Failure)**: Nếu thuê 1 EC2, khi máy ảo đó gặp sự cố phần cứng, sập OS hoặc mất điện tại Data Center, toàn bộ hệ thống giám sát và giao diện sẽ chết hoàn toàn. Với Serverless, S3, DynamoDB, Lambda và API Gateway đều được AWS phân tán dự phòng sẵn trên tối thiểu 3 Availability Zones độc lập.  
+> 2. **Tối ưu hóa Chi phí (FinOps)**: Máy chủ EC2 dù không có người truy cập vẫn phải trả tiền thuê CPU/RAM 24/7. Ngược lại, hệ thống Serverless của nhóm chỉ tính tiền khi có request thực sự phát sinh, giúp dự án đạt chi phí thực tế đúng \$0.00.  
+> 3. **Tự động mở rộng (Elasticity)**: Khi số lượng endpoint cần giám sát tăng từ 10 lên 10,000, Lambda và DynamoDB tự động co giãn tức thời mà không cần kỹ sư phải vào nâng cấp cấu hình máy chủ hay chỉnh sửa code."*
+
+#### 💣 Câu hỏi 2: "Nếu cùng lúc có 50,000 người vào xem bảng điều khiển (Dashboard) thì hệ thống của em chịu tải thế nào, điểm nghẽn (bottleneck) sẽ nằm ở đâu?"
+> **Trả lời mẫu**:  
+> *"Dạ thưa Thầy/Cô:  
+> 1. **Ở tầng Frontend**: 50,000 người tải trang web sẽ được mạng lưới Cloudflare CDN toàn cầu phục vụ ngay tại các Edge Server gần người dùng nhất. S3 không hề bị quá tải vì các file tĩnh (`index.html`, JS, CSS) đã được cache sẵn ở tầng biên.  
+> 2. **Ở tầng Backend API**: API Gateway v2 có hạn mức mặc định lên tới 10,000 request/giây và Lambda có thể mở rộng đồng thời (concurrency) lên hàng nghìn hàm song song trong vài giây.  
+> 3. **Điểm nghẽn tiềm ẩn**: Điểm cần kiểm soát dung lượng nhất chính là DynamoDB. Tuy nhiên, vì bảng DynamoDB của nhóm đang để ở chế độ **On-Demand Capacity**, nó sẽ tự động nhân bản throughput ngay lập tức để đáp ứng tải đột biến mà không bị nghẽn (throttling)."*
+
+#### 💣 Câu hỏi 3: "Tại sao nhóm lại dùng DynamoDB (NoSQL) mà không dùng RDS MySQL/PostgreSQL?"
+> **Trả lời mẫu**:  
+> *"Dạ thưa Thầy/Cô, hệ thống giám sát sức khỏe website là bài toán đặc thù của dữ liệu Time-Series (dữ liệu chuỗi thời gian) và Key-Value:  
+> - Dữ liệu của CloudPulse có cấu trúc rõ ràng theo từng Monitor, không có nhu cầu JOIN nhiều bảng phức tạp.  
+> - DynamoDB cung cấp tốc độ phản hồi nhất quán ở mức mili-giây (single-digit ms) dù bảng có 1 nghìn hay 1 tỷ bản ghi.  
+> - DynamoDB có tính năng TTL tự động xóa kết quả kiểm tra cũ sau 7 ngày mà không tốn công viết cron job dọn rác.  
+> - Quan trọng nhất về mặt chi phí: RDS yêu cầu chi phí khởi tạo máy chủ cơ sở dữ liệu tối thiểu ~\$15–\$25/tháng, trong khi DynamoDB On-Demand hoàn toàn miễn phí cho mức sử dụng của nhóm."*
+
+#### 💣 Câu hỏi 4: "Lambda Cold Start là gì và nhóm đã xử lý hoặc giảm thiểu nó như thế nào với .NET 8?"
+> **Trả lời mẫu**:  
+> *"Dạ thưa Thầy/Cô, **Cold Start** là khoảng thời gian AWS phải khởi tạo container mới, tải runtime và nạp mã nguồn khi một hàm Lambda được gọi lần đầu tiên hoặc sau một thời gian dài không hoạt động:  
+> - Để tối ưu, nhóm em đã chọn **.NET 8** kết hợp với mô hình **ASP.NET Core Minimal API** cực kỳ tinh gọn thay vì Controller MVC truyền thống, giúp giảm dung lượng package đóng gói xuống mức tối thiểu.  
+> - Đối với hàm `HealthChecker`, vì nó được EventBridge kích hoạt liên tục mỗi 1 phút (`rate(1 minute)`), container của hàm này luôn ở trạng thái **Warm** (ấm), do đó hoàn toàn không bị ảnh hưởng bởi Cold Start trong quá trình kiểm tra thực tế."*
 
 ---
 
