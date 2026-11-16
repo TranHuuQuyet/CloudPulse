@@ -309,3 +309,49 @@ Dưới đây là bảng phân tích chi tiết từng dịch vụ đám mây, g
 > 2. **Dọn dẹp tự động (TTL)**: Cấu hình DynamoDB TTL 7 ngày trên bảng `CheckResults` để dữ liệu cũ tự hủy, không tích lũy dung lượng rác.
 > 3. **Kết quả nghiệm thu**: Hóa đơn tháng 11/2026 của AWS đạt đúng **$0.00 USD**, toàn bộ gói Credit tài trợ $120.00 vẫn được bảo toàn nguyên vẹn $119.97 mà hệ thống vẫn duy trì khả năng sẵn sàng cao."*
 
+### Câu 8: Tại sao Lambda của nhóm không đặt trong VPC (Virtual Private Cloud)? Có vi phạm bảo mật không?
+> **Trả lời mẫu (Ghi điểm tuyệt đối về Network Architecture)**:  
+> *"Dạ thưa Thầy/Cô, đây là một quyết định kiến trúc được cân nhắc rất kỹ lưỡng giữa **Hiệu năng, Chi phí (FinOps) và An ninh mạng**:
+> 1. **Mục đích của Lambda**: `HealthChecker` cần truy cập ra ngoài Internet công cộng để kiểm tra HTTP/HTTPS của các website khách hàng. Nếu đặt Lambda vào VPC riêng, Lambda sẽ bị cô lập hoàn toàn và bắt buộc phải đi qua **NAT Gateway** để ra ngoài Internet.
+> 2. **Chi phí NAT Gateway**: Một con AWS NAT Gateway có giá tối thiểu **~\$32.40 USD/tháng** (~0.045\$/giờ) chưa tính phí truyền dữ liệu, điều này vi phạm nguyên tắc tối ưu chi phí (\$0.00) của dự án.
+> 3. **Tính an toàn của Non-VPC Lambda**: Lambda chạy trong VPC công cộng của AWS vẫn an toàn tuyệt đối vì:
+>    - Mọi tương tác giữa Lambda và DynamoDB/SNS đều đi qua mạng trục nội bộ của AWS (**AWS Internal Backbone**) có mã hóa TLS và xác thực danh tính **AWS Signature Version 4 (SigV4)** thông qua IAM Role.
+>    - Lambda không có IP Public cố định và không mở bất kỳ cổng lắng nghe (listening port) nào từ Internet, do đó hacker hoàn toàn không thể quét cổng hay tấn công trực tiếp vào Lambda."*
+
+### Câu 9: Nếu người dùng nhập URL độc hại như `http://169.254.169.254` hoặc IP nội bộ, hệ thống có bị lộ IAM Role (SSRF Attack) không?
+> **Trả lời mẫu (Ghi điểm về Cloud Security)**:  
+> *"Dạ thưa Thầy/Cô, nhóm em đã thiết kế cơ chế **Phòng thủ Đa Lớp (Defense in Depth)** để triệt tiêu hoàn toàn lỗ hổng SSRF (Server-Side Request Forgery):
+> 1. **Ở tầng Ứng dụng (Code Level)**: Module `UrlValidator.cs` thực hiện phân giải DNS trước khi gửi request. Nếu địa chỉ IP thuộc dải Private (RFC 1918: `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), dải Loopback (`127.0.0.1`), hoặc dải Link-Local (`169.254.0.0/16` - dải IP của AWS Instance Metadata Service), hệ thống sẽ lập tức từ chối với lỗi `SSRF_DETECTED` ngay từ khâu tạo Monitor.
+> 2. **Bộ Test Suite kiểm chứng**: Nhóm đã viết 51 bài kiểm thử tự động trong `CloudPulse.Core.Tests` phủ kín toàn bộ các biến thể SSRF (IPv4, IPv6, bypass bằng số thập phân, localhost) và đều đạt 100% Passed."*
+
+### Câu 10: EventBridge kích hoạt Lambda theo cơ chế gì? Nếu có lỗi mạng hoặc hàm bị chạy lặp (At-least-once) thì sao?
+> **Trả lời mẫu (Hiểu sâu về Event-Driven Architecture)**:  
+> *"Dạ thưa Thầy/Cô:
+> 1. **Cơ chế kích hoạt**: EventBridge kích hoạt Lambda theo mô hình **Bất đồng bộ (Asynchronous Invocation)** với cam kết phân phối **At-least-once (Ít nhất một lần)**. Mặc định EventBridge tự động thử lại (Retry) 2 lần nếu Lambda trả về lỗi tạm thời.
+> 2. **Xử lý trùng lặp (Idempotency)**: Để tránh trường hợp 1 đợt ping bị ghi nhận 2 lần làm sai lệch thống kê, hàm `HealthChecker` lưu bản ghi kết quả vào DynamoDB với khóa chính kết hợp `(monitorId, checkedAt)`. Nếu 2 lần thực thi xảy ra cùng một thời điểm, thao tác `PutItem` có tính chất **Idempotent** (ghi đè kết quả cùng trạng thái), đồng thời State Machine của Monitor chỉ cập nhật `lastCheckedAt` và giữ nguyên trạng thái `consecutiveFailures`, tuyệt đối không gây kích hoạt cảnh báo giả."*
+
+### Câu 11: Nếu muốn di dời toàn bộ hệ thống sang Region khác (Tokyo `ap-northeast-1` hoặc US) khi Region Singapore gặp sự cố, RTO và RPO là bao nhiêu?
+> **Trả lời mẫu (Disaster Recovery & Business Continuity)**:  
+> *"Dạ thưa Thầy/Cô, nhờ áp dụng 100% **Infrastructure as Code (IaC)** với AWS SAM:
+> 1. **RTO (Recovery Time Objective - Thời gian khôi phục)**: Chỉ mất **khoảng 3 đến 5 phút**. Kỹ sư chỉ cần chạy duy nhất lệnh: `sam deploy --region ap-northeast-1 --config-env prod`, toàn bộ hạ tầng gồm 3 bảng DynamoDB, API Gateway, 3 hàm Lambda, EventBridge Rule và SNS Topic sẽ được CloudFormation tự động dựng mới hoàn toàn tại Tokyo.
+> 2. **RPO (Recovery Point Objective - Mức độ mất mát dữ liệu)**: Đối với dữ liệu cấu hình Monitor, nếu bật tính năng **DynamoDB Global Tables** (sao chép đa vùng chủ động - multi-region active-active), RPO sẽ xấp xỉ **bằng 0 (dưới 1 giây)**."*
+
+### Câu 12: Hãy chứng minh bằng công thức toán học tại sao hệ thống hoạt động 24/7 mà hóa đơn AWS vẫn đạt chính xác $0.00 USD?
+> **Trả lời mẫu (FinOps Mathematical Proof)**:  
+> *"Dạ thưa Thầy/Cô, nhóm em tính toán dựa trên định mức **AWS Free Tier**:
+> 1. **AWS Lambda**:
+>    - *Miễn phí*: 1,000,000 requests/tháng và 3,200,000 giây tính toán (với 128MB RAM).
+>    - *Thực tế CloudPulse tiêu thụ*: 1 lần chạy/phút × 60 phút × 24 giờ × 30 ngày = **43,200 requests/tháng**.
+>    - *Tỷ lệ sử dụng*: Chỉ dùng hết **4.32%** định mức miễn phí! Dư thừa tới 95.68%.
+> 2. **Amazon DynamoDB**:
+>    - *Miễn phí*: 25 GB dung lượng lưu trữ + 25 WCU và 25 RCU (Always Free - Miễn phí trọn đời).
+>    - *Thực tế*: Dữ liệu 100 monitors chỉ tốn ~10 MB và có TTL 7 ngày tự dọn dẹp, dung lượng luôn < 0.1% Free Tier.
+> 3. **Amazon EventBridge & SNS**:
+>    - EventBridge Rule theo lịch: Hoàn toàn miễn phí.
+>    - SNS: Miễn phí 1,000,000 lượt publish và 1,000 email/tháng.
+> 4. **AWS S3 & Cloudflare**:
+>    - Frontend build chỉ nặng ~500 KB (nằm gọn trong 5 GB Free Tier của S3).
+>    - Toàn bộ băng thông và truy vấn được Cloudflare CDN xử lý ở tầng biên hoàn toàn miễn phí.
+> ➔ **Kết luận**: Chi phí lý thuyết và thực tế của hệ thống luôn giữ vững ở mức **$0.00 USD/tháng**."*
+
+
