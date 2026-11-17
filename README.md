@@ -235,7 +235,8 @@ Hồ sơ thiết kế và tài liệu vận hành chi tiết được lưu trữ
 * [docs/use-cases.md](./docs/use-cases.md): Sơ đồ tuần tự và kịch bản chi tiết cho 7 ca sử dụng chính.
 * [docs/acceptance-criteria.md](./docs/acceptance-criteria.md): Bộ tiêu chí kiểm định chất lượng theo cấu trúc Given-When-Then.
 * [docs/duties.md](./docs/duties.md): Ma trận phân nhiệm RACI và tiến độ triển khai theo tuần.
-* [docs/TV1.md](./docs/TV1.md): Báo cáo kiến trúc đám mây, các bản ghi quyết định kiến trúc (ADR), nhật ký ứng cứu sự cố và ngân hàng câu hỏi chuyên sâu.
+* [docs/cloud-services-setup-guide.md](./docs/cloud-services-setup-guide.md): Cẩm nang chi tiết cách thiết lập, cấu hình và giải nghĩa ý nghĩa kỹ thuật từng dịch vụ đám mây (DynamoDB, Lambda, API Gateway, EventBridge, SNS, S3, Cloudflare, Telegram, IAM, CloudWatch, SAM).
+* [docs/TV1.md](./docs/TV1.md): Báo cáo kiến trúc đám mây, các bản ghi quyết định kiến trúc (ADR), nhật ký ứng cứu sự cố và ngân hàng 12 câu hỏi chuyên sâu.
 * [docs/report/](./docs/report/): Báo cáo đồ án chính thức (Word format), slide thuyết trình và bằng chứng kiểm thử.
 
 ---
