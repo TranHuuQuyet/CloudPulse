@@ -1,0 +1,11 @@
+{
+  "output": "docs\\report\\CloudPulse_BaoCao_CuoiCung_ChinhLy.docx",
+  "paragraphs": 275,
+  "tables": 58,
+  "embedded_images": 17,
+  "chapters": 6,
+  "source_test_run": "2026-11-11T08:34:40.030Z",
+  "validation": "DOCX reopened successfully; chapter headings, tables and embedded images checked.",
+  "rendering": "DOCX structure checked; visual pagination has not been reviewed. Update TOC and review page breaks in Word.",
+  "editorial_focus": "Project architecture, implementation, data flow and evidence; one compact member table."
+}
