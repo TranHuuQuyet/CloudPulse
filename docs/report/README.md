@@ -1,5 +1,7 @@
 # Báo cáo Word CloudPulse — TV5
 
+Bản tập trung vào sản phẩm: [CloudPulse_BaoCao_SanPham.docx](CloudPulse_BaoCao_SanPham.docx). Gồm 6 chương, 11 ảnh và 8 bảng; trình bày mục đích, chức năng, kiến trúc, triển khai và kết quả chính. Không đưa nhật ký web lỗi hoặc kiểm thử kỹ thuật phụ vào báo cáo. Các vị trí thiếu ảnh được đánh dấu ngắn bằng `[BỔ SUNG ẢNH: ...]`. Điền thông tin bìa/thành viên, cập nhật mục lục và xem lại phân trang trong Word. Script tạo bản này: `tools/build_product_report.py`; kết quả kiểm tra: `validation-product.json`.
+
 File chính: [CloudPulse_BaoCao_TV5_Tuan3.docx](CloudPulse_BaoCao_TV5_Tuan3.docx).
 
 Đã ghép Chương 1–6, bìa, phân công, từ viết tắt, mục lục cập nhật trong Word, tài liệu tham khảo và ba phụ lục. Có 11 hình nhúng trực tiếp, gồm sơ đồ kiến trúc và ảnh kiểm thử, kèm caption/nguồn/giới hạn. Ảnh trong assets là bản cắt phục vụ trình bày; ảnh gốc giữ tại ../evidence/w3-05.

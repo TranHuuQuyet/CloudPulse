@@ -1,0 +1,10 @@
+{
+  "output": "docs\\report\\CloudPulse_BaoCao_SanPham.docx",
+  "chapters": 6,
+  "embedded_images": 11,
+  "tables": 8,
+  "paragraphs": 105,
+  "focus": "Product purpose, functions, architecture, implementation and observed results.",
+  "validation": "DOCX reopened and six chapters/images checked.",
+  "rendering": "Update TOC and review pagination in Microsoft Word."
+}
