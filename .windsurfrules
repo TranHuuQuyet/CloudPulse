@@ -1,0 +1,12 @@
+# Windsurf Cascade Rules — Nexus Kit SDD Protocol
+
+This project is governed by **Nexus Kit** (Spec-Driven Development).
+
+## Mandatory Directives
+1. **NO VIBE CODING**: Never write or modify application code in `src/` without an approved specification in `.specify/tasks/`.
+2. **Read Constitution First**: Always consult `.specify/constitution.md` before planning or coding to verify tech stack constraints and quality gates.
+3. **Execute the SDD Triad** (located in `.agents/skills/`):
+   - **Planning**: Load `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md`. Draft specifications into `.specify/tasks/` and wait for human approval before coding.
+   - **Coding**: Load `.agents/skills/sdd-coder/SKILL.md` and implement strictly within `In-Scope` bounds of approved specs.
+   - **Verification**: Load `.agents/skills/sdd-verifier/SKILL.md` to audit implementation against all Acceptance Criteria.
+4. **Show Spec Status Board**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
