@@ -1,0 +1,12 @@
+# Cline Rules — Nexus Kit SDD Protocol
+
+This repository adheres to **Nexus Kit** (Spec-Driven Development).
+
+## Mandatory Rules
+1. **NO VIBE CODING**: Never write or modify application code in `src/` without an approved specification in `.specify/tasks/`.
+2. **Read Constitution First**: Check `.specify/constitution.md` before writing any code to ensure compliance with the tech stack and typing rules.
+3. **SDD Workflow** (located in `.agents/skills/`):
+   - **sdd-planner**: When asked to create or modify a feature, use `.agents/skills/sdd-planner/SKILL.md` and `.specify/templates/spec-template.md`. Save to `.specify/tasks/` and require human approval (`--approve`).
+   - **sdd-coder**: Follow `.agents/skills/sdd-coder/SKILL.md` only after verifying approval with `nexus-kit --verify-spec <spec-path>`.
+   - **sdd-verifier**: Follow `.agents/skills/sdd-verifier/SKILL.md` to audit Acceptance Criteria before completing the task.
+4. **Show Spec Status Board**: At the end of every Planning, Coding, or Verification response, display the current **Spec Status Board** in chat (prefer MCP `nexus://board`, else run `nexus-kit board` / `npx create-nexus-kit board`, or render a Markdown table from `.specify/tasks/` if offline).
