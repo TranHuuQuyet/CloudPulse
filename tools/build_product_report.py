@@ -3,6 +3,9 @@ from pathlib import Path
 import sys
 import io
 import json
+import re
+import shutil
+from datetime import datetime
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'.report-libs'))
@@ -172,9 +175,13 @@ h('4.1. Triển khai backend trên AWS')
 p('Backend sử dụng .NET 8 và AWS SAM tại vùng ap-southeast-1. Stack cloudpulse-app tạo API Gateway, ba hàm Lambda API/HealthChecker/MockTarget, các bảng DynamoDB và SNS cùng tài nguyên hỗ trợ. Outputs công bố API endpoint và MockTarget endpoint để frontend tích hợp. Ảnh stack cho thấy trạng thái UPDATE_COMPLETE.')
 pic('e01-cloudformation-outputs.jpg','Hình 4.1. Outputs của stack CloudPulse.')
 pic('e01-cloudformation-resources.jpg','Hình 4.2. Các tài nguyên được triển khai bằng CloudFormation.')
+pic('e01-lambda-runtime-dotnet8.png','Hình 4.3. Runtime .NET 8 của Lambda API.')
 h('4.2. Hosting frontend và tên miền')
 p('Frontend được build thành tài nguyên tĩnh và lưu tại bucket cloudpulse-dashboard-tv1. Người dùng truy cập https://clpulse.cloud qua Cloudflare; Cloud Connector định tuyến tới origin S3. Trình duyệt gọi API Gateway riêng để đọc và ghi dữ liệu. Cấu trúc này tách phân phối giao diện khỏi tiến trình giám sát, cho phép cập nhật frontend độc lập với HealthChecker.')
-placeholder('S3 Static Website Hosting và Cloudflare DNS / SSL / Cloud Connector')
+pic('e02-s3-static-website-hosting-enabled.png','Hình 4.4. S3 bật Static Website Hosting cho frontend.')
+pic('e02-cloudflare-dns-cname.png','Hình 4.5. DNS của tên miền clpulse.cloud qua Cloudflare.')
+pic('e02-cloudflare-ssl-flexible.png','Hình 4.6. Cấu hình SSL/TLS tại Cloudflare.','Cloudflare sử dụng chế độ Flexible: kết nối người dùng tới Cloudflare dùng HTTPS, kết nối tới origin S3 Website dùng HTTP.')
+pic('e02-cloudflare-cloud-connector.png','Hình 4.7. Cloud Connector định tuyến tới bucket S3.')
 h('4.3. API và tích hợp giao diện')
 table(['API','Chức năng'],[
     ['GET /api/monitors','Đọc danh sách monitor.'],
@@ -185,10 +192,19 @@ table(['API','Chức năng'],[
     ['POST /api/monitors/{id}/check','Thực hiện Check Now.'],
 ])
 p('Khi chọn monitor, frontend tải checks và incidents song song. Khi đổi lựa chọn, response của lượt tải cũ được bỏ qua để tránh hiển thị nhầm dữ liệu. Sau Sync hoặc Check Now, giao diện làm mới dữ liệu của monitor đang chọn. Biểu đồ tính MIN/AVG/MAX trên cửa sổ kết quả đang hiển thị.')
+pic('e01-api-gateway-routes.png','Hình 4.8. Các route tích hợp tại API Gateway.')
+pic('e01-api-gateway-cors.png','Hình 4.9. Cấu hình CORS cho giao tiếp trình duyệt và API.')
 h('4.4. Lịch chạy, lưu trữ và quan sát')
 p('EventBridge kích hoạt HealthChecker theo lịch rate(1 minute). Mỗi chu kỳ kiểm tra các endpoint và ghi kết quả vào DynamoDB. CloudWatch lưu thời điểm bắt đầu/kết thúc và thông tin thực thi, giúp đối chiếu hoạt động định kỳ. Ảnh log thể hiện các chu kỳ liên tiếp; ảnh DynamoDB thể hiện CheckResults bật TTL và các Incident OPEN/RESOLVED.')
 pic('e04-cloudwatch-logs-execution.jpg','Hình 4.3. Các chu kỳ thực thi HealthChecker trong CloudWatch.')
 pic('e06-dynamodb-checkresults-ttl-on.jpg','Hình 4.4. Bảng CheckResults bật TTL.')
+pic('e04-eventbridge-scheduled-rule-enabled.png','Hình 4.12. Rule EventBridge của HealthChecker ở trạng thái Enabled.','Ảnh thể hiện rule đang bật; log thực thi minh họa các chu kỳ kiểm tra liên tiếp.')
+pic('e06-dynamodb-ttl-details-expireAt.png','Hình 4.13. TTL bật trên thuộc tính expireAt.')
+pic('e06-dynamodb-item-ttl-expireAt.png','Hình 4.14. Bản ghi CheckResults với dữ liệu đo và thời hạn lưu.','Bản ghi chứa checkedAt, expireAt, mã HTTP và độ trễ. Giá trị expireAt của mẫu tương ứng khoảng bảy ngày sau checkedAt.')
+h('4.5. Quyền truy cập và kênh thông báo')
+p('Lambda sử dụng IAM role để truy cập tài nguyên theo nhiệm vụ. Policy minh họa giới hạn Resource vào bảng CloudPulse_Monitors và các index của bảng, với các action DynamoDB được liệt kê rõ. SNS subscription xác nhận địa chỉ nhận email, cho phép hệ thống chuyển cảnh báo từ topic CloudPulse_Alerts tới người vận hành.')
+pic('e06-iam-policy-json-action-resource.jpg','Hình 4.15. Action và Resource của policy DynamoDB cho HealthChecker.','Ảnh minh họa policy trong trình soạn thảo IAM; không đại diện đầy đủ quyền của mọi role trong hệ thống.')
+pic('e05-sns-subscription-confirmed.png','Hình 4.16. Email subscription của SNS có trạng thái Confirmed.')
 
 h('Chương 5. Kết quả sản phẩm và đánh giá',1)
 h('5.1. Dashboard quản lý endpoint')
@@ -204,7 +220,7 @@ p('Email và Telegram đưa thông tin sự cố tới người vận hành ngo�
 pic('e05-a-telegram-alert.jpg','Hình 5.3. Telegram cảnh báo monitor DOWN.')
 pic('e05-c-telegram-recovery-alert.jpg','Hình 5.4. Telegram thông báo dịch vụ đã phục hồi.','Ảnh RECOVERED thuộc các monitor UTH-course và Dashboard-Course; ảnh DOWN phía trên thuộc Mock 500. Hai hình minh họa hai loại thông báo, không ghép thành một sự cố duy nhất.')
 pic('e05-b-email-sns-alert.jpg','Hình 5.5. Email SNS thông báo endpoint DOWN.',crop_bottom=.55)
-placeholder('Email thông báo RECOVERED')
+pic('e05-d-email-sns-recovery-alert.jpg','Hình 5.6. Email SNS thông báo endpoint đã phục hồi.','Thông báo ghi nhận endpoint courses.ut.edu.vn/my/courses.php trở lại UP và downtime 115 giây; đây là sự cố khác với các ảnh thông báo phía trên.',crop_bottom=.55)
 h('5.4. Chi phí vận hành thử nghiệm')
 p('CloudPulse sử dụng dịch vụ tính phí theo mức sử dụng, do đó cần theo dõi cả chi phí dịch vụ và ưu đãi tài khoản. Ảnh phân bổ tháng 11/2026 hiển thị DynamoDB khoảng 0,06 USD và API Gateway khoảng 0,04 USD, tổng các khoản hiển thị khoảng 0,10 USD. Đây là số liệu tài khoản tại thời điểm chụp; chưa tách chi phí ngoài dự án nếu có.')
 pic('e07-cost-breakdown-10cents.png','Hình 5.6. Phân bổ chi phí theo dịch vụ trong tháng 11/2026.')
@@ -248,7 +264,23 @@ footer.add_run('CloudPulse · ');field(footer,' PAGE ','1')
 doc.core_properties.title='CloudPulse — Báo cáo sản phẩm'
 doc.core_properties.author='Nhóm CloudPulse'
 target=OUT/'CloudPulse_BaoCao_SanPham.docx'
-doc.save(target)
+if target.exists():
+    backup=OUT/'backups'
+    backup.mkdir(exist_ok=True)
+    shutil.copy2(target,backup/('CloudPulse_BaoCao_SanPham_'+datetime.now().strftime('%Y%m%d_%H%M%S')+'.docx'))
+# Keep figure numbers consecutive after adding deployment evidence.
+counters={}
+for par in doc.paragraphs:
+    match=re.match(r'Hình (\d+)\.\d+\.',par.text)
+    if match:
+        chapter=match.group(1)
+        counters[chapter]=counters.get(chapter,0)+1
+        par.text=re.sub(r'^Hình \d+\.\d+\.',f'Hình {chapter}.{counters[chapter]}.',par.text)
+try:
+    doc.save(target)
+except PermissionError:
+    target=OUT/'CloudPulse_BaoCao_SanPham_CapNhatAnh.docx'
+    doc.save(target)
 check=Document(target)
 assert len(check.inline_shapes)==len(figures)
 assert all(any(par.text.startswith(f'Chương {i}.') for par in check.paragraphs) for i in range(1,7))

@@ -1,24 +1,11 @@
-# Báo cáo Word CloudPulse — TV5
+﻿# Báo cáo CloudPulse
 
-Bản tập trung vào sản phẩm: [CloudPulse_BaoCao_SanPham.docx](CloudPulse_BaoCao_SanPham.docx). Gồm 6 chương, 11 ảnh và 8 bảng; trình bày mục đích, chức năng, kiến trúc, triển khai và kết quả chính. Không đưa nhật ký web lỗi hoặc kiểm thử kỹ thuật phụ vào báo cáo. Các vị trí thiếu ảnh được đánh dấu ngắn bằng `[BỔ SUNG ẢNH: ...]`. Điền thông tin bìa/thành viên, cập nhật mục lục và xem lại phân trang trong Word. Script tạo bản này: `tools/build_product_report.py`; kết quả kiểm tra: `validation-product.json`.
+Bản đang sử dụng: [CloudPulse_BaoCao_SanPham_TuFileCuaBan.docx](CloudPulse_BaoCao_SanPham_TuFileCuaBan.docx).
 
-File chính: [CloudPulse_BaoCao_TV5_Tuan3.docx](CloudPulse_BaoCao_TV5_Tuan3.docx).
+Bản này được cập nhật từ file Word người dùng cung cấp trong Downloads, giữ nội dung đã chỉnh và bổ sung 13 ảnh dịch vụ mới, tổng cộng 24 ảnh. Đã xóa các bản Word cũ trong thư mục báo cáo; chỉ giữ bản mới nhất được liên kết ở trên.
 
-Đã ghép Chương 1–6, bìa, phân công, từ viết tắt, mục lục cập nhật trong Word, tài liệu tham khảo và ba phụ lục. Có 11 hình nhúng trực tiếp, gồm sơ đồ kiến trúc và ảnh kiểm thử, kèm caption/nguồn/giới hạn. Ảnh trong assets là bản cắt phục vụ trình bày; ảnh gốc giữ tại ../evidence/w3-05.
+Trước khi nộp, cập nhật mục lục và kiểm tra ngắt trang trong Word. Hai vị trí còn chờ ảnh là biểu đồ/tooltip và lịch sử RESOLVED trên Dashboard.
 
-Các khung vàng chỉ rõ cần làm gì, ở đâu và ai cung cấp:
+Ảnh nguồn nằm trong `assets/`. Không chạy lại script tạo báo cáo sau khi chỉnh tay nếu chưa sao lưu; các script có thể tạo lại phiên bản cũ hoặc ghi đè nội dung.
 
-| Vị trí | Nội dung còn thiếu |
-| --- | --- |
-| Bìa / bảng phân công | Trường, khoa, môn, lớp, giảng viên, tên và MSSV, đóng góp xác nhận |
-| 4.6 / E01, E06 | TV1: ảnh SAM outputs, IAM và TTL |
-| 5.5 / E04, E05 | TV2: CloudWatch Logs, Telegram/Email DOWN và recovery |
-| 5.5 / E03-RESOLVED | Kiểm thử recovery cùng monitor/Incident |
-| 5.2 / 5.5 / E07 | TV1: dự toán đúng region và hóa đơn trước/sau credits |
-| Phụ lục B | Cơ chế đổi target để demo recovery, phân vai và video dự phòng |
 
-CORS POST production và timezone chart còn được ghi nhận là lỗi; không coi báo cáo hiện tại là bằng chứng nghiệm thu toàn bộ hệ thống.
-
-Mở Word, điền thông tin còn thiếu và cập nhật mục lục bằng bấm phải vào trường mục lục → Update Field → Update entire table. Môi trường tạo file chưa cài Microsoft Word/LibreOffice nên chưa render để kiểm tra số trang/ngắt trang; đã kiểm tra mở lại DOCX, XML, ảnh nhúng, bảng và sáu tiêu đề chương. Thông số A4/TNR/lề chỉ là lựa chọn tạm vì chưa có mẫu chính thức của trường.
-
-Tái tạo file: cài `python-docx`, `Pillow`, rồi chạy `python tools/build_tv5_report.py`. Có thể dùng `--libs <thư mục thư viện>` nếu cài thư viện tách riêng. Script đọc các bản thảo Markdown và results.json. Sau khi chỉnh trực tiếp file Word, không chạy lại script nếu chưa lưu bản sao: script tạo lại file Word cùng tên.
