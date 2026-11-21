@@ -237,6 +237,7 @@ Hồ sơ thiết kế và tài liệu vận hành chi tiết được lưu trữ
 * [docs/duties.md](./docs/duties.md): Ma trận phân nhiệm RACI và tiến độ triển khai theo tuần.
 * [docs/cloud-services-setup-guide.md](./docs/cloud-services-setup-guide.md): Cẩm nang chi tiết cách thiết lập, cấu hình và giải nghĩa ý nghĩa kỹ thuật từng dịch vụ đám mây (DynamoDB, Lambda, API Gateway, EventBridge, SNS, S3, Cloudflare, Telegram, IAM, CloudWatch, SAM).
 * [docs/TV1.md](./docs/TV1.md): Báo cáo kiến trúc đám mây, các bản ghi quyết định kiến trúc (ADR), nhật ký ứng cứu sự cố và ngân hàng 12 câu hỏi chuyên sâu.
+* [docs/presentation-slides-outline.md](./docs/presentation-slides-outline.md): Khung sườn slide thuyết trình 14 slide chuẩn bảo vệ đồ án kèm kịch bản lời thoại (Speaker Notes) chuyên sâu dịch vụ Cloud.
 * [docs/report/](./docs/report/): Báo cáo đồ án chính thức (Word format), slide thuyết trình và bằng chứng kiểm thử.
 
 ---
